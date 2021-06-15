@@ -2,4 +2,4 @@
 *.o
 **.idea/
 **libs/
-
+*.zip
