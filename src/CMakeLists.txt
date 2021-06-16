@@ -26,9 +26,7 @@ set(HEADERS
 #############################################################################################
 # Executables
 
-
-
-add_executable(main main.cpp ${HEADERS} )
+#add_executable(main main.cpp ${HEADERS} )
 
 add_executable(test_loading test_loading.cpp ${HEADERS} )
 
@@ -36,9 +34,9 @@ add_executable(test_loading test_loading.cpp ${HEADERS} )
 #############################################################################################
 # Linking
 
-target_link_libraries(main ${OpenCV_LIBS})
+#target_link_libraries(main ${OpenCV_LIBS})
 target_link_libraries(test_loading ${OpenCV_LIBS})
-target_include_directories(main PUBLIC ${Eigen3_INCLUDE_DIR})
+#target_include_directories(main PUBLIC ${Eigen3_INCLUDE_DIR})
 target_include_directories(test_loading PUBLIC ${Eigen3_INCLUDE_DIR})
 
 #target_link_libraries(dragon ceres)

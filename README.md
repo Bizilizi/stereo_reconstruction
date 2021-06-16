@@ -21,7 +21,7 @@ The dataset itself is already included in the repository and does not have to be
 
 OpenCV uses dynamic linking which means that some functions that depend on third party libraries might only fail during runtime. A quick hack if some kind of error occurs is to simply install all required dependencies using:
 <pre><code> sudo apt-get install libopencv-* </code></pre>
-After that, opencv has to be rebuild and reinstalled. 
+After that, opencv has to be rebuilt and reinstalled. 
 
 3. Ceres - TBD
 
