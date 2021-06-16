@@ -2,27 +2,50 @@
 // Created by tim on 15.06.21.
 //
 
-#include <stdio.h>
+#include <iostream>
 #include <opencv4/opencv2/opencv.hpp>
+#include "Eigen.h"
 
 
-using namespace cv;
-int main(int argc, char** argv )
-{
-    if ( argc != 2 )
-    {
-        printf("usage: DisplayImage.out <Image_Path>\n");
-        return -1;
+void displayStereoImages(cv::Mat &image1, cv::Mat &image2){
+    cv::Mat stackedImages;
+    cv::hconcat(image1, image2, stackedImages);
+    cv::namedWindow("Display Image", cv::WINDOW_AUTOSIZE );
+    cv::imshow("Display Image", stackedImages);
+}
+
+void displaySingleImage(cv::Mat &image1){
+    cv::namedWindow("Display Image", cv::WINDOW_AUTOSIZE );
+    cv::imshow("Display Image", image1);
+}
+
+int main(int argc, char** argv ) {
+
+
+    std::string image_path;
+    if (argc == 1) {
+        image_path = "/home/tim/repos/stereo_reconstruction/data/MiddEval3/trainingH/ArtL";
+    } else {
+        image_path = std::string(argv[1]);
     }
-    Mat image;
-    image = imread( argv[1], 1 );
-    if ( !image.data )
+
+    // Stereo Images
+    cv::Mat image1 = cv::imread(image_path + "/im0.png", cv::IMREAD_COLOR);
+    cv::Mat image2 = cv::imread(image_path + "/im1.png", cv::IMREAD_COLOR);
+
+    // Disparity map
+    // TODO: Use SDK and cvkit!
+    cv::Mat rawDispImage = cv::imread(image_path + "/disp0GT.pfm", cv::IMREAD_UNCHANGED);
+
+
+    if ( !image1.data || !image2.data)
     {
-        printf("No image data \n");
+        std::cout << "No image data" << std::endl;
         return -1;
+    } else {
+        std::cout << "Reading successful" << std::endl;
+        displayStereoImages(image1, image2);
     }
-    //namedWindow("Display Image", WINDOW_AUTOSIZE );
-    imshow("Display Image", image);
-    waitKey(0);
-    return 0;
+
+    cv::waitKey(0);
 }
