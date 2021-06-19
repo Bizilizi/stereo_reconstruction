@@ -34,7 +34,9 @@ int main(int argc, char** argv ) {
     cv::Mat image2 = cv::imread(image_path + "/im1.png", cv::IMREAD_COLOR);
 
     // Disparity map
-    // TODO: Use SDK and cvkit!
+    // TODO: Use SDK and cvkit
+    // SDK: load image
+    // cvkit: display image
     cv::Mat rawDispImage = cv::imread(image_path + "/disp0GT.pfm", cv::IMREAD_UNCHANGED);
 
 
