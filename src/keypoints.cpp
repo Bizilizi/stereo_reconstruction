@@ -7,7 +7,7 @@
 #include <opencv2/core.hpp>
 #include <opencv2/highgui.hpp>
 #include <opencv2/features2d.hpp>
-
+#include "directory.h"
 
 
 void featureMatching(const cv::Mat& featuresLeft, const cv::Mat& featuresRight, std::vector<cv::DMatch>& outputMatches, float ratio_thresh=0.7f) {
@@ -44,7 +44,7 @@ void SIFTKeypointDetection(const cv::Mat &image, std::vector<cv::KeyPoint> &outp
 int main(int argc, char** argv) {
     std::string image_path;
     if (argc == 1) {
-        image_path = "/home/tim/repos/stereo_reconstruction/data/MiddEval3/trainingH/ArtL";
+        image_path = getCurrentDirectory() + "/../../data/MiddEval3/trainingH/ArtL";
     } else {
         image_path = std::string(argv[1]);
     }
@@ -52,6 +52,10 @@ int main(int argc, char** argv) {
     // load stereo images
     cv::Mat imageLeft = cv::imread(image_path + "/im0.png", cv::IMREAD_COLOR);
     cv::Mat imageRight = cv::imread(image_path + "/im1.png", cv::IMREAD_COLOR);
+    if ( !imageLeft.data || !imageRight.data) {
+        std::cout << "No image data. Check file path!" << std::endl;
+        return -1;
+    }
 
     // find keypoints
     std::vector<cv::KeyPoint> keypointsLeft, keypointsRight;
@@ -63,19 +67,17 @@ int main(int argc, char** argv) {
     std::vector<cv::DMatch> matches;
     featureMatching(featuresLeft, featuresRight, matches);
 
-    // draw matches
-    cv::Mat img_matches;
-    drawMatches( imageLeft, keypointsLeft, imageRight, keypointsRight, matches, img_matches, cv::Scalar::all(-1),
-                 cv::Scalar::all(-1), std::vector<char>(), cv::DrawMatchesFlags::NOT_DRAW_SINGLE_POINTS );
-
-    // visualization for feature extraction
+    // visualization of feature extraction
     cv::Mat outputImageLeft, outputImageRight;
     cv::drawKeypoints(imageLeft, keypointsLeft, outputImageLeft);
     cv::drawKeypoints(imageRight, keypointsRight, outputImageRight);
     cv::imwrite("../../results/imageLeft.png", outputImageLeft);
     cv::imwrite("../../results/imageRight.png", outputImageRight);
 
-    // visualization for feature matching
+    // visualization of feature matching
+    cv::Mat img_matches;
+    cv::drawMatches( imageLeft, keypointsLeft, imageRight, keypointsRight, matches, img_matches, cv::Scalar::all(-1),
+                     cv::Scalar::all(-1), std::vector<char>(), cv::DrawMatchesFlags::NOT_DRAW_SINGLE_POINTS );
     cv::imwrite("../../results/matching_flann.png", img_matches);
 
     return 0;

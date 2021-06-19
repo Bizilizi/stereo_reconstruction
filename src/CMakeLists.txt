@@ -4,7 +4,6 @@ set( CMAKE_CONFIGURATION_TYPES Debug Release CACHE TYPE INTERNAL FORCE )
 project( stereo_reconstruction )
 set( CMAKE_CXX_STANDARD 14 )
 
-
 #############################################################################################
 # Package Requirements
 find_package( Ceres REQUIRED )
@@ -18,19 +17,17 @@ set(Eigen3_INCLUDE_DIR ${LIBRARY_DIR}/eigen-3.4/ CACHE PATH "Path to Eigen sourc
 # Header / Source Files
 
 set(HEADERS
-        Eigen.h)
+    Eigen.h
+    directory.h)
 
-# same for Sources later
-
+set(SOURCES
+    directory.cpp)
 
 #############################################################################################
 # Executables
 
-#add_executable(main main.cpp ${HEADERS} )
-
-add_executable(test_loading test_loading.cpp ${HEADERS} )
-add_executable(keypoints keypoints.cpp ${HEADERS})
-
+add_executable(test_loading test_loading.cpp ${HEADERS} ${SOURCES})
+add_executable(keypoints keypoints.cpp ${HEADERS} ${SOURCES})
 
 #############################################################################################
 # Linking
@@ -44,4 +41,3 @@ target_include_directories(keypoints PUBLIC ${Eigen3_INCLUDE_DIR})
 
 #target_link_libraries(dragon ceres)
 #target_link_libraries(surface ceres)
-
