@@ -9,6 +9,7 @@
 #include <opencv2/features2d.hpp>
 
 
+
 void featureMatching(const cv::Mat& featuresLeft, const cv::Mat& featuresRight, std::vector<cv::DMatch>& outputMatches, float ratio_thresh=0.7f) {
     cv::Ptr<cv::DescriptorMatcher> matcher = cv::DescriptorMatcher::create(cv::DescriptorMatcher::FLANNBASED);
     std::vector< std::vector<cv::DMatch> > knn_matches;
@@ -79,3 +80,19 @@ int main(int argc, char** argv) {
 
     return 0;
 }
+
+
+/**
+* TODO:
+ *
+ * [1. Ransac Outlier filtern] (next week)
+ *
+ * 2. 8pt-Algorithm (Eigen) (Gabriel)
+ *      - conversion matches OpenCV > Matrix/ Vectoren in Eigen
+ *      - convertMatchToEigen(matches, KeypointsLeft, KeypointsRight, out: MatrixLeft, out: MatrixRight)
+ *      - Algorithmus zur Bestimmung der Extrinsics [MVG]
+ *
+ * 3. Optimization: Redefinement of results of 8 pt algorithm (Eigen) Tim
+ *      - mit gegebenen Extrinsics: Depth Computation of Keypoints [MVG]
+ *      - BundleAdjustment (Ceres)
+*/
