@@ -18,10 +18,11 @@ set(Eigen3_INCLUDE_DIR ${LIBRARY_DIR}/eigen-3.4/ CACHE PATH "Path to Eigen sourc
 
 set(HEADERS
     Eigen.h
-    directory.h)
+    directory.h
+    eight_point.h)
 
 set(SOURCES
-    directory.cpp)
+    directory.cpp eight_point.cpp)
 
 #############################################################################################
 # Executables

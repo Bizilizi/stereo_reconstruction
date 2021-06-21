@@ -7,7 +7,9 @@
 #include <opencv2/core.hpp>
 #include <opencv2/highgui.hpp>
 #include <opencv2/features2d.hpp>
+#include "Eigen.h"
 #include "directory.h"
+#include "eight_point.h"
 
 
 void featureMatching(const cv::Mat& featuresLeft, const cv::Mat& featuresRight, std::vector<cv::DMatch>& outputMatches, float ratio_thresh=0.7f) {
@@ -79,6 +81,17 @@ int main(int argc, char** argv) {
     cv::drawMatches( imageLeft, keypointsLeft, imageRight, keypointsRight, matches, img_matches, cv::Scalar::all(-1),
                      cv::Scalar::all(-1), std::vector<char>(), cv::DrawMatchesFlags::NOT_DRAW_SINGLE_POINTS );
     cv::imwrite("../../results/matching_flann.png", img_matches);
+
+
+    // estimate pose using the eight point algorithm
+    // TODO read calib.txt to get camera matrices -> SDK?
+    Matrix3f cameraLeft;
+    cameraLeft << 1870, 0, 297, 0, 1870, 277, 0, 0, 1;
+    Matrix3f cameraRight;
+    cameraRight << 1870, 0, 397, 0, 1870, 277, 0, 0, 1;
+
+    Matrix4f pose;
+    eightPointAlgorithm(keypointsLeft, keypointsRight, matches, cameraLeft, cameraRight, pose);
 
     return 0;
 }
