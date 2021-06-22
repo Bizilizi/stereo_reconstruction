@@ -85,20 +85,38 @@ void eightPointAlgorithm(const std::vector<cv::KeyPoint>& keypointsLeft, const s
         xRight.col(i) = pointsRight.at(i);
     }
     // std::cout << xLeft << std::endl;
+
     MatrixXf xLeftReconstructed, xRightReconstructed;
-    if(!structureReconstruction(rotation1, translation1, xLeft, xRight, xLeftReconstructed, xRightReconstructed)){
-        bool success = structureReconstruction(rotation2, translation2, xLeft, xRight, xLeftReconstructed, xRightReconstructed);
-        if (!success)
-            throw std::runtime_error("Depth reconstruction failed.");
+    Matrix3f validRotation;
+    Vector3f validTranslation;
+    std::vector<Matrix3f> possibleRotations{rotation1, rotation2};
+    std::vector<VectorXf> possibleTranslations;
+    possibleTranslations.emplace_back(translation1);
+    possibleTranslations.emplace_back(translation1);
+
+    bool success = false;
+    for (auto &rotation : possibleRotations ) {
+        for (auto &translation : possibleTranslations) {
+            if(structureReconstruction(rotation, translation, xLeft, xRight, xLeftReconstructed, xRightReconstructed)){
+                validRotation = rotation;
+                validTranslation = translation;
+                success = true;
+                break;
+            }
+        }
+    }
+    if(success) {
+        throw std::runtime_error("Depth reconstruction failed.");
     }
 
     // return estimated pose
     pose = Matrix4f::Identity();
-    pose.block(0, 0, 3, 3) = rotation1;
-    pose.block(0, 3, 3, 1) = translation1;
+    pose.block(0, 0, 3, 3) = validRotation;
+    pose.block(0, 3, 3, 1) = validTranslation;
 }
 
-bool structureReconstruction(const Matrix3f& R, const Vector3f& T, const MatrixXf& xLeft, const MatrixXf& xRight, MatrixXf& xLeftReconstructed, MatrixXf& xRightReconstructed) {
+bool structureReconstruction(const Matrix3f& R, const Vector3f& T, const MatrixXf& xLeft, const MatrixXf& xRight,
+                             MatrixXf& xLeftReconstructed, MatrixXf& xRightReconstructed) {
     int nPoints = (int) xLeft.cols();
     MatrixXf M = MatrixXf::Zero(3*nPoints, nPoints + 1);
 
@@ -157,4 +175,19 @@ Matrix3f vectorAsSkew(const Vector3f &vec) {
     return skewMatrix;
 }
 
+void transformMatchedKeypointsToEigen(const std::vector<cv::KeyPoint>& keypointsLeft,
+                                      const std::vector<cv::KeyPoint>& keypointsRight,
+                                      const std::vector<cv::DMatch>& matches,
+                                      MatrixXf& outLeft,
+                                      MatrixXf& outRight) {
+    outLeft = MatrixXf::Zero(3, matches.size());
+    outRight = MatrixXf::Zero(3, matches.size());
+
+    int i = 0;
+    for (cv::DMatch match : matches) {
+        outLeft.col(i) = Vector3f(keypointsLeft[match.queryIdx].pt.x, keypointsLeft[match.queryIdx].pt.y, 1);
+        outRight.col(i) = Vector3f(keypointsRight[match.trainIdx].pt.x, keypointsRight[match.trainIdx].pt.y, 1);
+        i++;
+    }
+}
 

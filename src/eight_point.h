@@ -32,4 +32,18 @@ bool structureReconstruction(const Matrix3f& R, const Vector3f& T, const MatrixX
  */
 Matrix3f vectorAsSkew(const Vector3f& vec);
 
+/**
+ * Convert the matched keypoint pairs given to two Eigen matrices.
+ * @param keypointsLeft vector of keypoints in left image
+ * @param keypointsRight vector of keypoints in right image
+ * @param matches cv::DMatch instance that contains the indices of matched keypoints
+ * @param outLeft output matrix for keypoints in left picture
+ * @param outRight output matrix for keypoints in right picture
+ */
+void transformMatchedKeypointsToEigen(const std::vector<cv::KeyPoint>& keypointsLeft,
+                                      const std::vector<cv::KeyPoint>& keypointsRight,
+                                      const std::vector<cv::DMatch>& matches,
+                                      MatrixXf& outLeft,
+                                      MatrixXf& outRight);
+
 #endif //STEREO_RECONSTRUCTION_EIGHT_POINT_H

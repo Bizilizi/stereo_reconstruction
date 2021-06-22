@@ -94,6 +94,11 @@ int main(int argc, char** argv) {
     Matrix4f pose;
     eightPointAlgorithm(keypointsLeft, keypointsRight, matches, cameraLeft, cameraRight, pose);
 
+    MatrixXf kpLeftMat, kpRightMat;
+    transformMatchedKeypointsToEigen(keypointsLeft, keypointsRight, matches, kpLeftMat, kpRightMat);
+
+
+
     return 0;
 }
 
