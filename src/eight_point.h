@@ -6,12 +6,12 @@
 #define STEREO_RECONSTRUCTION_EIGHT_POINT_H
 
 #include "Eigen.h"
-void eightPointAlgorithm(const std::vector<cv::KeyPoint>& keypointsLeft,
-                         const std::vector<cv::KeyPoint>& keypointsRight,
-                         const std::vector<cv::DMatch>& matches,
+void eightPointAlgorithm(const Matrix3Xf& matchesLeft,
+                         const Matrix3Xf& matchesRight,
                          const Matrix3f& cameraLeft,
                          const Matrix3f& cameraRight,
-                         Matrix4f& pose);
+                         Matrix4f& pose,
+                         Matrix3f& essentialMatrix);
 
 /**
  * Reconstructs depth of corresponding 2D points in two views by triangulation.
@@ -33,6 +33,14 @@ bool structureReconstruction(const Matrix3f& R, const Vector3f& T, const MatrixX
 Matrix3f vectorAsSkew(const Vector3f& vec);
 
 /**
+ * Kronecker product for two vectors.
+ * @param vec1
+ * @param vec2
+ * @return Kronecker product
+ */
+VectorXf kron(const VectorXf &vec1, const VectorXf &vec2);
+
+/**
  * Convert the matched keypoint pairs given to two Eigen matrices.
  * @param keypointsLeft vector of keypoints in left image
  * @param keypointsRight vector of keypoints in right image
@@ -43,7 +51,7 @@ Matrix3f vectorAsSkew(const Vector3f& vec);
 void transformMatchedKeypointsToEigen(const std::vector<cv::KeyPoint>& keypointsLeft,
                                       const std::vector<cv::KeyPoint>& keypointsRight,
                                       const std::vector<cv::DMatch>& matches,
-                                      MatrixXf& outLeft,
-                                      MatrixXf& outRight);
+                                      Matrix3Xf& outLeft,
+                                      Matrix3Xf& outRight);
 
 #endif //STEREO_RECONSTRUCTION_EIGHT_POINT_H

@@ -6,43 +6,30 @@
 #include <opencv4/opencv2/opencv.hpp>
 #include "Eigen.h"
 #include "eight_point.h"
-#include <algorithm>
 
-void eightPointAlgorithm(const std::vector<cv::KeyPoint>& keypointsLeft, const std::vector<cv::KeyPoint>& keypointsRight, const std::vector<cv::DMatch>& matches, const Matrix3f& cameraLeft, const Matrix3f& cameraRight, Matrix4f& pose) {
+void eightPointAlgorithm(const Matrix3Xf& matchesLeft, const Matrix3Xf& matchesRight, const Matrix3f& cameraLeft, const Matrix3f& cameraRight, Matrix4f& pose, Matrix3f& essentialMatrix) {
     // get all matched keypoint pairs and prepare them for using Eigen in the eight point algorithm
-    std::vector<Vector3f> matchesLeft, matchesRight;
-    int numMatches = 0;
-    for (cv::DMatch match : matches) {
-        matchesLeft.emplace_back(Vector3f(keypointsLeft[match.queryIdx].pt.x, keypointsLeft[match.queryIdx].pt.y, 1));
-        matchesRight.emplace_back(Vector3f(keypointsRight[match.trainIdx].pt.x, keypointsRight[match.trainIdx].pt.y, 1));
-        numMatches++;
-        //std::cout << Vector3f(keypointsLeft[match.queryIdx].pt.x, keypointsLeft[match.queryIdx].pt.y, 1) << std::endl;
-        //std::cout << Vector3f(keypointsRight[match.trainIdx].pt.x, keypointsRight[match.trainIdx].pt.y, 1) << std::endl;
-    }
+    int numMatches = (int) matchesLeft.cols();
     if (numMatches < 8) {
         throw std::runtime_error("Less than 8 input point pairs detected for processing the Eight Point Algorithm!");
     }
 
     // transform image coordinates with inverse camera matrix (inverse intrinsics)
-    std::vector<Vector3f> pointsLeft, pointsRight;
-    for (int i=0; i < numMatches; i++) {
-        pointsLeft.emplace_back(cameraLeft.inverse() * matchesLeft[i]);
-        pointsRight.emplace_back(cameraRight.inverse() * matchesRight[i]);
-    }
+    Matrix3Xf pointsLeft, pointsRight;
+    pointsLeft = cameraLeft.inverse() * matchesLeft;
+    pointsRight = cameraRight.inverse() * matchesRight;
 
     /** Eight Point Algorithm **/
     // compute approximation of essential matrix
     MatrixXf chi(numMatches, 9);
     for (int i=0; i < numMatches; i++) {
-        chi.block(i, 0, 1, 3) = Vector3f(pointsLeft[i].x() * pointsRight[i].x(), pointsLeft[i].x() * pointsRight[i].y(), pointsLeft[i].x() * 1).transpose();
-        chi.block(i, 3, 1, 3) = Vector3f(pointsLeft[i].y() * pointsRight[i].x(), pointsLeft[i].y() * pointsRight[i].y(), pointsLeft[i].y() * 1).transpose();
-        chi.block(i, 6, 1, 3) = Vector3f(1 * pointsRight[i].x(), 1 * pointsRight[i].y(), 1 * 1).transpose();
+        chi(i,seqN(0, 9)) = kron(pointsLeft.col(i), pointsRight.col(i));
     }
     JacobiSVD<MatrixXf> svdChi(chi, ComputeThinV);
     // extract essential matrix from last column of matrix V
-    Matrix3f essentialMatrix = svdChi.matrixV().block(0, 8, 9, 1).reshaped(3, 3);
+    essentialMatrix = svdChi.matrixV().block(0, 8, 9, 1).reshaped(3, 3);
 
-    // project onto normalized essential space using SVD
+    // project essential matrix onto normalized essential space using SVD
     JacobiSVD<Matrix3f> svdEssential(essentialMatrix, ComputeFullU | ComputeFullV);
     // correct values of SVD
     MatrixXf matrixU = svdEssential.matrixU();
@@ -55,6 +42,7 @@ void eightPointAlgorithm(const std::vector<cv::KeyPoint>& keypointsLeft, const s
     }
     Matrix3f matrixSigma = Matrix3f::Identity();
     matrixSigma(2, 2) = 0;
+    essentialMatrix = matrixU * matrixSigma * matrixV.transpose();
 
     // recover displacement from essential matrix
     Matrix3f zRotation1 = Matrix3f::Zero();
@@ -77,27 +65,18 @@ void eightPointAlgorithm(const std::vector<cv::KeyPoint>& keypointsLeft, const s
     //std::cout << translation1 << std::endl << std::endl;
     //std::cout << translation2 << std::endl << std::endl;
 
-    // FiXME: Mabye use this matrix notation in this function as well
-    MatrixXf xLeft = MatrixXf::Zero(3, pointsLeft.size());
-    MatrixXf xRight = MatrixXf::Zero(3, pointsRight.size());
-    for (int i=0; i < pointsLeft.size(); i++){
-        xLeft.col(i) = pointsLeft.at(i);
-        xRight.col(i) = pointsRight.at(i);
-    }
-    // std::cout << xLeft << std::endl;
-
     MatrixXf xLeftReconstructed, xRightReconstructed;
     Matrix3f validRotation;
     Vector3f validTranslation;
     std::vector<Matrix3f> possibleRotations{rotation1, rotation2};
     std::vector<VectorXf> possibleTranslations;
     possibleTranslations.emplace_back(translation1);
-    possibleTranslations.emplace_back(translation1);
+    possibleTranslations.emplace_back(translation2);
 
     bool success = false;
     for (auto &rotation : possibleRotations ) {
         for (auto &translation : possibleTranslations) {
-            if(structureReconstruction(rotation, translation, xLeft, xRight, xLeftReconstructed, xRightReconstructed)){
+            if(structureReconstruction(rotation, translation, pointsLeft, pointsRight, xLeftReconstructed, xRightReconstructed)){
                 validRotation = rotation;
                 validTranslation = translation;
                 success = true;
@@ -105,7 +84,7 @@ void eightPointAlgorithm(const std::vector<cv::KeyPoint>& keypointsLeft, const s
             }
         }
     }
-    if(success) {
+    if(!success) {
         throw std::runtime_error("Depth reconstruction failed.");
     }
 
@@ -114,6 +93,7 @@ void eightPointAlgorithm(const std::vector<cv::KeyPoint>& keypointsLeft, const s
     pose.block(0, 0, 3, 3) = validRotation;
     pose.block(0, 3, 3, 1) = validTranslation;
 }
+
 
 bool structureReconstruction(const Matrix3f& R, const Vector3f& T, const MatrixXf& xLeft, const MatrixXf& xRight,
                              MatrixXf& xLeftReconstructed, MatrixXf& xRightReconstructed) {
@@ -157,6 +137,7 @@ bool structureReconstruction(const Matrix3f& R, const Vector3f& T, const MatrixX
     std::cout << "Reconstructed points right:" << std::endl;
     std::cout << xLeftReconstructed << std::endl;
 #endif
+
     // check depth of all reconstructed points
     bool success = (xLeftReconstructed.row(2).array() >= 0).all() && (xRightReconstructed.row(2).array() >=0).all();
     return success;
@@ -175,13 +156,25 @@ Matrix3f vectorAsSkew(const Vector3f &vec) {
     return skewMatrix;
 }
 
+VectorXf kron(const VectorXf &vec1, const VectorXf &vec2){
+    int n = (int) vec1.size();
+    int m = (int) vec2.size();
+    VectorXf out = VectorXf::Zero(n * m);
+
+    for (int i=0; i < n; i++){
+        out(seqN(i*m, m)) = vec1(i) * vec2;
+    }
+
+    return out;
+}
+
 void transformMatchedKeypointsToEigen(const std::vector<cv::KeyPoint>& keypointsLeft,
                                       const std::vector<cv::KeyPoint>& keypointsRight,
                                       const std::vector<cv::DMatch>& matches,
-                                      MatrixXf& outLeft,
-                                      MatrixXf& outRight) {
-    outLeft = MatrixXf::Zero(3, matches.size());
-    outRight = MatrixXf::Zero(3, matches.size());
+                                      Matrix3Xf& outLeft,
+                                      Matrix3Xf& outRight) {
+    outLeft = Matrix3Xf::Zero(3, matches.size());
+    outRight = Matrix3Xf::Zero(3, matches.size());
 
     int i = 0;
     for (cv::DMatch match : matches) {

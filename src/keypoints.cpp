@@ -44,6 +44,8 @@ void SIFTKeypointDetection(const cv::Mat &image, std::vector<cv::KeyPoint> &outp
 
 
 int main(int argc, char** argv) {
+
+
     std::string image_path;
     if (argc == 1) {
         image_path = getCurrentDirectory() + "/../../data/MiddEval3/trainingH/ArtL";
@@ -91,13 +93,14 @@ int main(int argc, char** argv) {
     Matrix3f cameraRight;
     cameraRight << 1870, 0, 397, 0, 1870, 277, 0, 0, 1;
 
-    Matrix4f pose;
-    eightPointAlgorithm(keypointsLeft, keypointsRight, matches, cameraLeft, cameraRight, pose);
-
-    MatrixXf kpLeftMat, kpRightMat;
+    Matrix3Xf kpLeftMat, kpRightMat;
     transformMatchedKeypointsToEigen(keypointsLeft, keypointsRight, matches, kpLeftMat, kpRightMat);
 
-
+    Matrix4f pose;
+    Matrix3f essentialMatrix;
+    eightPointAlgorithm(kpLeftMat, kpRightMat, cameraLeft, cameraRight, pose, essentialMatrix);
+    std::cout << "Pose: " << std::endl;
+    std::cout << pose << std::endl;
 
     return 0;
 }
@@ -108,12 +111,19 @@ int main(int argc, char** argv) {
  *
  * [1. Ransac Outlier filtern] (next week)
  *
- * 2. 8pt-Algorithm (Eigen) (Gabriel)
- *      - conversion matches OpenCV > Matrix/ Vectoren in Eigen
- *      - convertMatchToEigen(matches, KeypointsLeft, KeypointsRight, out: MatrixLeft, out: MatrixRight)
- *      - Algorithmus zur Bestimmung der Extrinsics [MVG]
- *
- * 3. Optimization: Redefinement of results of 8 pt algorithm (Eigen) Tim
- *      - mit gegebenen Extrinsics: Depth Computation of Keypoints [MVG]
+ * 2. Optimization: Redefinement of results of 8 pt algorithm (Eigen)
  *      - BundleAdjustment (Ceres)
+ *
+ * 3. SDK: Reading Image Data
+ *     int image_idx = 3;  // one index per scenario in trainingFiles
+ *     class Dataloader(/relative/path/to/training/data )
+ *     load(idx) > data struct
+ *
+ *     data struct{
+ *     imageLeft,
+ *     imageRight,
+ *     intrinsics,
+ *     xyz,
+ *     }
+ *
 */
