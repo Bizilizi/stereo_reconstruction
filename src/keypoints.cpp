@@ -62,6 +62,7 @@ int main(int argc, char** argv) {
     // find keypoints
     std::vector<cv::KeyPoint> keypointsLeft, keypointsRight;
     cv::Mat featuresLeft, featuresRight;
+    // FIXME: Filter out double matches!
     SIFTKeypointDetection(imageLeft, keypointsLeft, featuresLeft);
     SIFTKeypointDetection(imageRight, keypointsRight, featuresRight);
 
