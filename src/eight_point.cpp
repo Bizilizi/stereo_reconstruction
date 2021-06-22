@@ -4,8 +4,8 @@
 
 #include <iostream>
 #include <opencv4/opencv2/opencv.hpp>
-#include "Eigen.h"
 #include "eight_point.h"
+
 
 void eightPointAlgorithm(const Matrix3Xf& matchesLeft, const Matrix3Xf& matchesRight, const Matrix3f& cameraLeft, const Matrix3f& cameraRight, Matrix4f& pose, Matrix3f& essentialMatrix) {
     // get all matched keypoint pairs and prepare them for using Eigen in the eight point algorithm
@@ -58,12 +58,6 @@ void eightPointAlgorithm(const Matrix3Xf& matchesLeft, const Matrix3Xf& matchesR
     Matrix3f skewSymmetricT2 = matrixU * zRotation2 * matrixSigma * matrixU.transpose();
     Vector3f translation1 = Vector3f(-skewSymmetricT1(1, 2), skewSymmetricT1(0, 2), -skewSymmetricT1(0, 1));
     Vector3f translation2 = Vector3f(-skewSymmetricT2(1, 2), skewSymmetricT2(0, 2), -skewSymmetricT2(0, 1));
-
-    // TODO find the correct combination of rotation and translation - structure reconstruction???
-    //std::cout << rotation1 << std::endl << std::endl;
-    //std::cout << rotation2 << std::endl << std::endl;
-    //std::cout << translation1 << std::endl << std::endl;
-    //std::cout << translation2 << std::endl << std::endl;
 
     MatrixXf xLeftReconstructed, xRightReconstructed;
     Matrix3f validRotation;
@@ -143,6 +137,7 @@ bool structureReconstruction(const Matrix3f& R, const Vector3f& T, const MatrixX
     return success;
 }
 
+
 Matrix3f vectorAsSkew(const Vector3f &vec) {
     Matrix3f skewMatrix = Matrix3f::Zero();
     // upper triangular matrix
@@ -156,6 +151,7 @@ Matrix3f vectorAsSkew(const Vector3f &vec) {
     return skewMatrix;
 }
 
+
 VectorXf kron(const VectorXf &vec1, const VectorXf &vec2){
     int n = (int) vec1.size();
     int m = (int) vec2.size();
@@ -167,6 +163,7 @@ VectorXf kron(const VectorXf &vec1, const VectorXf &vec2){
 
     return out;
 }
+
 
 void transformMatchedKeypointsToEigen(const std::vector<cv::KeyPoint>& keypointsLeft,
                                       const std::vector<cv::KeyPoint>& keypointsRight,
@@ -183,4 +180,3 @@ void transformMatchedKeypointsToEigen(const std::vector<cv::KeyPoint>& keypoints
         i++;
     }
 }
-

@@ -44,8 +44,6 @@ void SIFTKeypointDetection(const cv::Mat &image, std::vector<cv::KeyPoint> &outp
 
 
 int main(int argc, char** argv) {
-
-
     std::string image_path;
     if (argc == 1) {
         image_path = getCurrentDirectory() + "/../../data/MiddEval3/trainingH/ArtL";

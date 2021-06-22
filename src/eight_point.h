@@ -6,6 +6,17 @@
 #define STEREO_RECONSTRUCTION_EIGHT_POINT_H
 
 #include "Eigen.h"
+
+
+/**
+ * Estimates the extrinsics of a two view perspective
+ * @param matchesLeft (3, N) stacked matched keypoints of left image
+ * @param matchesRight (3, N) stacked matched keypoints of right image
+ * @param cameraLeft (3, 3) camera matrix (intrinsics) of left image
+ * @param cameraRight (3, 3) camera matrix (intrinsics) of right image
+ * @param pose (4, 4) output
+ * @param essentialMatrix (3, 3) output
+ */
 void eightPointAlgorithm(const Matrix3Xf& matchesLeft,
                          const Matrix3Xf& matchesRight,
                          const Matrix3f& cameraLeft,
@@ -15,7 +26,7 @@ void eightPointAlgorithm(const Matrix3Xf& matchesLeft,
 
 /**
  * Reconstructs depth of corresponding 2D points in two views by triangulation.
- * @param R (3,3) Rotation matrix
+ * @param R (3, 3) Rotation matrix
  * @param T (3) Translation vector
  * @param xLeft (3, N) homogenous coordinates for matched points in left picture
  * @param xRight (3, N) homogenous coordinates for matched points in left picture
