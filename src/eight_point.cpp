@@ -7,23 +7,28 @@
 #include "eight_point.h"
 
 
-void eightPointAlgorithm(const Matrix3Xf& matchesLeft, const Matrix3Xf& matchesRight, const Matrix3f& cameraLeft, const Matrix3f& cameraRight, Matrix4f& pose, Matrix3f& essentialMatrix) {
+EightPointAlgorithm::EightPointAlgorithm(const Matrix3Xf &matchesLeft, const Matrix3Xf &matchesRight,
+                                         const Matrix3f &cameraLeft, const Matrix3f &cameraRight)
+        : matchesLeft{matchesLeft}, matchesRight{matchesRight}, cameraLeft{cameraLeft}, cameraRight{cameraRight} {
     // get all matched keypoint pairs and prepare them for using Eigen in the eight point algorithm
-    int numMatches = (int) matchesLeft.cols();
+    numMatches = (int) matchesLeft.cols();
     if (numMatches < 8) {
         throw std::runtime_error("Less than 8 input point pairs detected for processing the Eight Point Algorithm!");
     }
 
-    // transform image coordinates with inverse camera matrix (inverse intrinsics)
-    Matrix3Xf pointsLeft, pointsRight;
-    pointsLeft = cameraLeft.inverse() * matchesLeft;
-    pointsRight = cameraRight.inverse() * matchesRight;
+    pointsLeftReconstructed = MatrixXf::Zero(3, numMatches);
+    pointsRightReconstructed = MatrixXf::Zero(3, numMatches);
 
+    run();
+}
+
+void EightPointAlgorithm::run() {
+    updateData();
     /** Eight Point Algorithm **/
     // compute approximation of essential matrix
     MatrixXf chi(numMatches, 9);
-    for (int i=0; i < numMatches; i++) {
-        chi(i,seqN(0, 9)) = kron(pointsLeft.col(i), pointsRight.col(i));
+    for (int i = 0; i < numMatches; i++) {
+        chi(i, seqN(0, 9)) = kron(pointsLeft.col(i), pointsRight.col(i));
     }
     JacobiSVD<MatrixXf> svdChi(chi, ComputeThinV);
     // extract essential matrix from last column of matrix V
@@ -68,9 +73,9 @@ void eightPointAlgorithm(const Matrix3Xf& matchesLeft, const Matrix3Xf& matchesR
     possibleTranslations.emplace_back(translation2);
 
     bool success = false;
-    for (auto &rotation : possibleRotations ) {
+    for (auto &rotation : possibleRotations) {
         for (auto &translation : possibleTranslations) {
-            if(structureReconstruction(rotation, translation, pointsLeft, pointsRight, xLeftReconstructed, xRightReconstructed)){
+            if (structureReconstruction(rotation, translation)) {
                 validRotation = rotation;
                 validTranslation = translation;
                 success = true;
@@ -78,7 +83,7 @@ void eightPointAlgorithm(const Matrix3Xf& matchesLeft, const Matrix3Xf& matchesR
             }
         }
     }
-    if(!success) {
+    if (!success) {
         throw std::runtime_error("Depth reconstruction failed.");
     }
 
@@ -88,25 +93,22 @@ void eightPointAlgorithm(const Matrix3Xf& matchesLeft, const Matrix3Xf& matchesR
     pose.block(0, 3, 3, 1) = validTranslation;
 }
 
-
-bool structureReconstruction(const Matrix3f& R, const Vector3f& T, const MatrixXf& xLeft, const MatrixXf& xRight,
-                             MatrixXf& xLeftReconstructed, MatrixXf& xRightReconstructed) {
-    int nPoints = (int) xLeft.cols();
-    MatrixXf M = MatrixXf::Zero(3*nPoints, nPoints + 1);
+bool EightPointAlgorithm::structureReconstruction(const Matrix3f &R, const Vector3f &T) {
+    MatrixXf M = MatrixXf::Zero(3 * numMatches, numMatches + 1);
 
     // fill M matrix
-    for (int i=0; i<nPoints; i++){
-        M(seqN(3*i,3), i) = vectorAsSkew(xRight.col(i)) * R * xLeft.col(i);
-        M(seqN(3*i,3), nPoints) = vectorAsSkew(xRight.col(i)) * T;
+    for (int i = 0; i < numMatches; i++) {
+        M(seqN(3 * i, 3), i) = vectorAsSkew(pointsRight.col(i)) * R * pointsLeft.col(i);
+        M(seqN(3 * i, 3), numMatches) = vectorAsSkew(pointsRight.col(i)) * T;
     }
 
     // get vector V corresponding to smallest eigenvalue of M'*M (least squares estimate)
     EigenSolver<MatrixXf> es(M.transpose() * M);
-    auto& eigenvalues = es.eigenvalues();
+    auto &eigenvalues = es.eigenvalues();
     int idxSmallestEigenvalue = 0;
     float smallestEigenvalue = eigenvalues[0].real();
-    for (int i=1; i < nPoints +1; i++) {
-        if (eigenvalues[i].real() < smallestEigenvalue){
+    for (int i = 1; i < numMatches + 1; i++) {
+        if (eigenvalues[i].real() < smallestEigenvalue) {
             smallestEigenvalue = eigenvalues[i].real();
             idxSmallestEigenvalue = i;
         }
@@ -115,9 +117,9 @@ bool structureReconstruction(const Matrix3f& R, const Vector3f& T, const MatrixX
 
     // reconstruct depth
     float scale = V(last);
-    VectorXf depthVec = V(seq(0, last-1)) / scale; // make scale similar to scale of translation
-    xLeftReconstructed = xLeft.cwiseProduct(depthVec.transpose().replicate(3, 1));
-    xRightReconstructed = (R * xLeftReconstructed) + T.replicate(1, nPoints);
+    VectorXf depthVec = V(seq(0, last - 1)) / scale; // make scale similar to scale of translation
+    pointsLeftReconstructed = pointsLeft.cwiseProduct(depthVec.transpose().replicate(3, 1));
+    pointsLeftReconstructed = (R * pointsRightReconstructed) + T.replicate(1, numMatches);
 
 #if 0
     // Some logging
@@ -133,15 +135,76 @@ bool structureReconstruction(const Matrix3f& R, const Vector3f& T, const MatrixX
 #endif
 
     // check depth of all reconstructed points
-    bool success = (xLeftReconstructed.row(2).array() >= 0).all() && (xRightReconstructed.row(2).array() >=0).all();
+    bool success =
+            (pointsLeftReconstructed.row(2).array() >= 0).all() && (pointsRightReconstructed.row(2).array() >= 0).all();
     return success;
+}
+
+void EightPointAlgorithm::updateData() {
+    // transform image coordinates with inverse camera matrix (inverse intrinsics)
+    pointsLeft = cameraLeft.inverse() * matchesLeft;
+    pointsRight = cameraRight.inverse() * matchesRight;
+
+}
+
+const Matrix3Xf &EightPointAlgorithm::getMatchesLeft() const {
+    return matchesLeft;
+}
+
+const Matrix3Xf &EightPointAlgorithm::getMatchesRight() const {
+    return matchesRight;
+}
+
+const Matrix3f &EightPointAlgorithm::getCameraLeft() const {
+    return cameraLeft;
+}
+
+const Matrix3f &EightPointAlgorithm::getCameraRight() const {
+    return cameraRight;
+}
+
+void EightPointAlgorithm::setMatches(const Matrix3Xf &leftMatches, const Matrix3Xf &rightMatches) {
+    if (leftMatches.cols() != rightMatches.cols()) {
+        throw std::runtime_error("Inputs matrix have to contain same amount of points");
+    }
+    numMatches = (int) leftMatches.cols();
+    matchesLeft = leftMatches;
+    matchesRight = rightMatches;
+
+    pointsLeft = cameraLeft.inverse() * matchesLeft;
+    pointsRight = cameraRight.inverse() * matchesRight;
+
+}
+
+void EightPointAlgorithm::setCameraRight(const Matrix3f &camera) {
+    cameraRight = camera;
+}
+
+void EightPointAlgorithm::setCameraLeft(const Matrix3f &camera) {
+    cameraLeft = camera;
+}
+
+const Matrix4f &EightPointAlgorithm::getPose() const {
+    return pose;
+}
+
+const Matrix3f &EightPointAlgorithm::getEssentialMatrix() const {
+    return essentialMatrix;
+}
+
+const Matrix3Xf &EightPointAlgorithm::getPointsLeftReconstructed() const {
+    return pointsLeftReconstructed;
+}
+
+const Matrix3Xf &EightPointAlgorithm::getPointsRightReconstructed() const {
+    return pointsRightReconstructed;
 }
 
 
 Matrix3f vectorAsSkew(const Vector3f &vec) {
     Matrix3f skewMatrix = Matrix3f::Zero();
     // upper triangular matrix
-    skewMatrix(0,1) = -vec.z();
+    skewMatrix(0, 1) = -vec.z();
     skewMatrix(0, 2) = vec.y();
     skewMatrix(1, 2) = -vec.x();
     // lower triangular matrix
@@ -152,24 +215,24 @@ Matrix3f vectorAsSkew(const Vector3f &vec) {
 }
 
 
-VectorXf kron(const VectorXf &vec1, const VectorXf &vec2){
+VectorXf kron(const VectorXf &vec1, const VectorXf &vec2) {
     int n = (int) vec1.size();
     int m = (int) vec2.size();
     VectorXf out = VectorXf::Zero(n * m);
 
-    for (int i=0; i < n; i++){
-        out(seqN(i*m, m)) = vec1(i) * vec2;
+    for (int i = 0; i < n; i++) {
+        out(seqN(i * m, m)) = vec1(i) * vec2;
     }
 
     return out;
 }
 
 
-void transformMatchedKeypointsToEigen(const std::vector<cv::KeyPoint>& keypointsLeft,
-                                      const std::vector<cv::KeyPoint>& keypointsRight,
-                                      const std::vector<cv::DMatch>& matches,
-                                      Matrix3Xf& outLeft,
-                                      Matrix3Xf& outRight) {
+void transformMatchedKeypointsToEigen(const std::vector<cv::KeyPoint> &keypointsLeft,
+                                      const std::vector<cv::KeyPoint> &keypointsRight,
+                                      const std::vector<cv::DMatch> &matches,
+                                      Matrix3Xf &outLeft,
+                                      Matrix3Xf &outRight) {
     outLeft = Matrix3Xf::Zero(3, matches.size());
     outRight = Matrix3Xf::Zero(3, matches.size());
 

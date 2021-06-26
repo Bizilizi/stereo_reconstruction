@@ -7,41 +7,91 @@
 
 #include "Eigen.h"
 
-
+class EightPointAlgorithm {
 /**
  * Estimates the extrinsics of a two view perspective
  * @param matchesLeft (3, N) stacked matched keypoints of left image
  * @param matchesRight (3, N) stacked matched keypoints of right image
  * @param cameraLeft (3, 3) camera matrix (intrinsics) of left image
  * @param cameraRight (3, 3) camera matrix (intrinsics) of right image
- * @param pose (4, 4) output
- * @param essentialMatrix (3, 3) output
- */
-void eightPointAlgorithm(const Matrix3Xf& matchesLeft,
-                         const Matrix3Xf& matchesRight,
-                         const Matrix3f& cameraLeft,
-                         const Matrix3f& cameraRight,
-                         Matrix4f& pose,
-                         Matrix3f& essentialMatrix);
+ * */
+public:
+    EightPointAlgorithm(const Matrix3Xf &matchesLeft,
+                        const Matrix3Xf &matchesRight,
+                        const Matrix3f &cameraLeft,
+                        const Matrix3f &cameraRight);
 
-/**
- * Reconstructs depth of corresponding 2D points in two views by triangulation.
- * @param R (3, 3) Rotation matrix
- * @param T (3) Translation vector
- * @param xLeft (3, N) homogenous coordinates for matched points in left picture
- * @param xRight (3, N) homogenous coordinates for matched points in left picture
- * @param xLeftReconstructed output
- * @param xRightReconstructed output
- * @return success boolean indicating whether all depths are positive (otherwise reconstruction failed)
- */
-bool structureReconstruction(const Matrix3f& R, const Vector3f& T, const MatrixXf& xLeft, const MatrixXf& xRight, MatrixXf& xLeftReconstructed, MatrixXf& xRightReconstructed);
+    void run();
+
+
+    /**
+     * Getters
+     */
+
+    const Matrix3Xf &getMatchesLeft() const;
+
+    const Matrix3Xf &getMatchesRight() const;
+
+    const Matrix3f &getCameraLeft() const;
+
+    const Matrix3f &getCameraRight() const;
+
+    const Matrix4f &getPose() const;
+
+    const Matrix3f &getEssentialMatrix() const;
+
+    const Matrix3Xf &getPointsLeftReconstructed() const;
+
+    const Matrix3Xf &getPointsRightReconstructed() const;
+
+    /**
+     * Setters
+     */
+
+    void setMatches(const Matrix3Xf &leftMatches, const Matrix3Xf &rightMatches);
+
+    void setCameraRight(const Matrix3f &camera);
+
+    void setCameraLeft(const Matrix3f &camera);
+
+
+private:
+    /**
+     * Reconstructs depth of corresponding 2D points in two views by triangulation.
+     * @param R (3, 3) Rotation matrix
+     * @param T (3) Translation vector
+     * @return success boolean indicating whether all depths are positive (otherwise reconstruction failed)
+     */
+    bool structureReconstruction(const Matrix3f &R, const Vector3f &T);
+
+    /**
+     * Projects matches into 3D by applying inverse intrinsics.
+     */
+    void updateData();
+
+    // inputs
+    Matrix3Xf matchesLeft;
+    Matrix3Xf matchesRight;
+    Matrix3f cameraLeft;
+    Matrix3f cameraRight;
+    Matrix3Xf pointsLeft;
+    Matrix3Xf pointsRight;
+    int numMatches;
+
+    // for results
+    Matrix4f pose;
+    Matrix3f essentialMatrix;
+    Matrix3Xf pointsLeftReconstructed;
+    Matrix3Xf pointsRightReconstructed;
+
+};
 
 /**
  * Converts a vector to its corresponding skew symmetric matrix.
  * @param vec Vector to b e converted
  * @return Skew symmetric matrix
  */
-Matrix3f vectorAsSkew(const Vector3f& vec);
+Matrix3f vectorAsSkew(const Vector3f &vec);
 
 /**
  * Kronecker product for two vectors.
@@ -59,10 +109,10 @@ VectorXf kron(const VectorXf &vec1, const VectorXf &vec2);
  * @param outLeft output matrix for keypoints in left picture
  * @param outRight output matrix for keypoints in right picture
  */
-void transformMatchedKeypointsToEigen(const std::vector<cv::KeyPoint>& keypointsLeft,
-                                      const std::vector<cv::KeyPoint>& keypointsRight,
-                                      const std::vector<cv::DMatch>& matches,
-                                      Matrix3Xf& outLeft,
-                                      Matrix3Xf& outRight);
+void transformMatchedKeypointsToEigen(const std::vector<cv::KeyPoint> &keypointsLeft,
+                                      const std::vector<cv::KeyPoint> &keypointsRight,
+                                      const std::vector<cv::DMatch> &matches,
+                                      Matrix3Xf &outLeft,
+                                      Matrix3Xf &outRight);
 
 #endif //STEREO_RECONSTRUCTION_EIGHT_POINT_H

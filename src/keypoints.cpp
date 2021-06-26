@@ -94,11 +94,14 @@ int main(int argc, char** argv) {
     Matrix3Xf kpLeftMat, kpRightMat;
     transformMatchedKeypointsToEigen(keypointsLeft, keypointsRight, matches, kpLeftMat, kpRightMat);
 
-    Matrix4f pose;
-    Matrix3f essentialMatrix;
-    eightPointAlgorithm(kpLeftMat, kpRightMat, cameraLeft, cameraRight, pose, essentialMatrix);
+    EightPointAlgorithm ep(kpLeftMat, kpRightMat, cameraLeft, cameraRight);
+    Matrix4f pose = ep.getPose();
+    Matrix3f esentialMatrix = ep.getEssentialMatrix();
+
     std::cout << "Pose: " << std::endl;
     std::cout << pose << std::endl;
+
+    // showExtrinsicsReconstruction(filename, kp)
 
     return 0;
 }
