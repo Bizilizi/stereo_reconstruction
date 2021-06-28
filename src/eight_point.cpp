@@ -7,14 +7,12 @@
 #include "eight_point.h"
 
 
-EightPointAlgorithm::EightPointAlgorithm(const Matrix3Xf &matchesLeft, const Matrix3Xf &matchesRight,
+EightPointAlgorithm::EightPointAlgorithm(const Matrix3Xf &matchesL, const Matrix3Xf &matchesR,
                                          const Matrix3f &cameraLeft, const Matrix3f &cameraRight)
-        : matchesLeft{matchesLeft}, matchesRight{matchesRight}, cameraLeft{cameraLeft}, cameraRight{cameraRight} {
+        : cameraLeft{cameraLeft}, cameraRight{cameraRight} {
     // get all matched keypoint pairs and prepare them for using Eigen in the eight point algorithm
-    numMatches = (int) matchesLeft.cols();
-    if (numMatches < 8) {
-        throw std::runtime_error("Less than 8 input point pairs detected for processing the Eight Point Algorithm!");
-    }
+
+    setMatches(matchesL, matchesR);
 
     pointsLeftReconstructed = MatrixXf::Zero(3, numMatches);
     pointsRightReconstructed = MatrixXf::Zero(3, numMatches);
@@ -64,6 +62,7 @@ void EightPointAlgorithm::run() {
     Vector3f translation1 = Vector3f(-skewSymmetricT1(1, 2), skewSymmetricT1(0, 2), -skewSymmetricT1(0, 1));
     Vector3f translation2 = Vector3f(-skewSymmetricT2(1, 2), skewSymmetricT2(0, 2), -skewSymmetricT2(0, 1));
 
+    // check which combination of translation and rotation is valid (assigns positive depth to all points)
     MatrixXf xLeftReconstructed, xRightReconstructed;
     Matrix3f validRotation;
     Vector3f validTranslation;
@@ -165,15 +164,17 @@ const Matrix3f &EightPointAlgorithm::getCameraRight() const {
 
 void EightPointAlgorithm::setMatches(const Matrix3Xf &leftMatches, const Matrix3Xf &rightMatches) {
     if (leftMatches.cols() != rightMatches.cols()) {
-        throw std::runtime_error("Inputs matrix have to contain same amount of points");
+        throw std::runtime_error("Inputs matrices have to contain same amount of points");
     }
-    numMatches = (int) leftMatches.cols();
-    matchesLeft = leftMatches;
-    matchesRight = rightMatches;
 
-    pointsLeft = cameraLeft.inverse() * matchesLeft;
-    pointsRight = cameraRight.inverse() * matchesRight;
+    std::vector<int> uniqueIdx = uniqueColumnsInMatrix(leftMatches);
+    matchesLeft = leftMatches(all, uniqueIdx);
+    matchesRight = rightMatches(all, uniqueIdx);
 
+    numMatches = (int) matchesLeft.cols();
+    if (numMatches < 8) {
+        throw std::runtime_error("Less than 8 input point pairs detected for processing the Eight Point Algorithm!");
+    }
 }
 
 void EightPointAlgorithm::setCameraRight(const Matrix3f &camera) {
@@ -243,3 +244,24 @@ void transformMatchedKeypointsToEigen(const std::vector<cv::KeyPoint> &keypoints
         i++;
     }
 }
+
+std::vector<int> uniqueColumnsInMatrix(const Matrix3Xf &pointMat, float tol) {
+    if (pointMat.cols() == 0 )
+        return std::vector<int> {};
+
+    std::vector<int> uniqueIdx = {0};
+    for (int i=1; i < pointMat.cols(); i++){
+        bool uniqueElement = true;
+        for (int j : uniqueIdx){
+            float diff = (pointMat.col(i) - pointMat.col(j)).norm();
+            if (diff < tol) {
+                uniqueElement = false;
+                break;
+            }
+        }
+        if (uniqueElement)
+            uniqueIdx.emplace_back(i);
+    }
+    return uniqueIdx;
+}
+

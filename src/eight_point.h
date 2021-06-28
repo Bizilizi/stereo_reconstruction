@@ -115,4 +115,12 @@ void transformMatchedKeypointsToEigen(const std::vector<cv::KeyPoint> &keypoints
                                       Matrix3Xf &outLeft,
                                       Matrix3Xf &outRight);
 
+/**
+ * Returns the column indices corresponding to unique elements.
+ * @param pointMat: (3,n)-matrix containing column-wise 3d vectors
+ * @param tol: max. tolerance for comparing elements
+ * @return vector of unique elements id
+ */
+std::vector<int> uniqueColumnsInMatrix(const Matrix3Xf &pointMat, float tol=0.1f);
+
 #endif //STEREO_RECONSTRUCTION_EIGHT_POINT_H

@@ -3,13 +3,16 @@
 //
 
 #include <iostream>
+
 #include <opencv4/opencv2/opencv.hpp>
 #include <opencv2/core.hpp>
 #include <opencv2/highgui.hpp>
 #include <opencv2/features2d.hpp>
+
 #include "Eigen.h"
 #include "directory.h"
 #include "eight_point.h"
+#include "SimpleMesh.h"
 
 
 void featureMatching(const cv::Mat& featuresLeft, const cv::Mat& featuresRight, std::vector<cv::DMatch>& outputMatches, float ratio_thresh=0.7f) {
@@ -40,6 +43,34 @@ void SIFTKeypointDetection(const cv::Mat &image, std::vector<cv::KeyPoint> &outp
     // erase duplicates
     // outputKeypoints.erase(std::unique(outputKeypoints.begin(), outputKeypoints.end(), [](cv::KeyPoint& p1, cv::KeyPoint& p2) {
     //     return std::hypot(p1.pt.x-p2.pt.x, p1.pt.y - p2.pt.y) < 10; }), outputKeypoints.end());
+}
+
+void showExtrinsicsReconstruction(const std::string &filename, const Matrix4f &pose,
+                                  const Matrix3Xf &pointsLeftReconstructed, const Matrix3Xf &pointsRightReconstructed) {
+    SimpleMesh outputMesh;
+    for (int i = 0; i < pointsLeftReconstructed.cols(); i++) {
+        SimpleMesh point = SimpleMesh::sphere(pointsLeftReconstructed.col(i), 0.01f);
+        outputMesh = SimpleMesh::joinMeshes(outputMesh, point);
+
+    }
+
+    SimpleMesh cameraLeftMesh = SimpleMesh::camera(Matrix4f::Identity(), 0.01f);
+    SimpleMesh cameraRightMesh = SimpleMesh::camera(pose, 0.01f, Vector4uc(0, 255, 0, 255));
+
+    SimpleMesh cameraMesh = SimpleMesh::joinMeshes(cameraLeftMesh, cameraRightMesh);
+    // outputMesh = SimpleMesh::joinMeshes(outputMesh, cameraMesh);
+
+    outputMesh.writeMesh(filename);
+}
+
+void testVisualizationExtrinsics(){
+    Matrix3Xf leftPoints, rightPoints;
+    leftPoints = Matrix3f::Zero(3, 3);
+    leftPoints.col(0) = Vector3f(1, 0, 0);
+    leftPoints.col(1) = Vector3f(0, 1, 0);
+    leftPoints.col(0) = Vector3f(0, 0, 1);
+
+    showExtrinsicsReconstruction("8pt_reconstruction_test.off", Matrix4f::Identity(), leftPoints, rightPoints);
 }
 
 
@@ -94,6 +125,17 @@ int main(int argc, char** argv) {
     Matrix3Xf kpLeftMat, kpRightMat;
     transformMatchedKeypointsToEigen(keypointsLeft, keypointsRight, matches, kpLeftMat, kpRightMat);
 
+#if 1
+    // some testing
+    std::cout << "Unfiltered matrix" << std::endl;
+    std::cout << kpLeftMat << std::endl;
+    std::cout << "Filtered matrix" << std::endl;
+
+    auto uniqueIdx = uniqueColumnsInMatrix(kpLeftMat);
+    std::cout << kpLeftMat(all, uniqueIdx) << std::endl;
+
+#endif
+
     EightPointAlgorithm ep(kpLeftMat, kpRightMat, cameraLeft, cameraRight);
     Matrix4f pose = ep.getPose();
     Matrix3f esentialMatrix = ep.getEssentialMatrix();
@@ -101,10 +143,13 @@ int main(int argc, char** argv) {
     std::cout << "Pose: " << std::endl;
     std::cout << pose << std::endl;
 
-    // showExtrinsicsReconstruction(filename, kp)
-
+    std::cout << ep.getPointsLeftReconstructed() << std::endl;
+    // showExtrinsicsReconstruction("8pt_reconstruction.off", pose, ep.getPointsLeftReconstructed(), ep.getPointsRightReconstructed());
+    testVisualizationExtrinsics();
     return 0;
 }
+
+
 
 
 /**
