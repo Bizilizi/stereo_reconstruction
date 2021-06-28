@@ -33,31 +33,23 @@ void featureMatching(const cv::Mat &featuresLeft, const cv::Mat &featuresRight, 
 void SIFTKeypointDetection(const cv::Mat &image, std::vector<cv::KeyPoint> &outputKeypoints, cv::Mat &outputDescriptor,
                            const float edgeThreshold = 10, const float contrastThreshold = 0.04) {
     // detect outputKeypoints using SIFT
-    cv::Ptr<cv::SIFT> detector = cv::SIFT::create(100, 3, contrastThreshold, edgeThreshold);
+    cv::Ptr<cv::SIFT> detector = cv::SIFT::create(500, 3, contrastThreshold, edgeThreshold);
     detector->detectAndCompute(image, cv::noArray(), outputKeypoints, outputDescriptor);
-
-    // sort detected outputKeypoints
-    // std::sort(outputKeypoints.begin(), outputKeypoints.end(), [](cv::KeyPoint& p1, cv::KeyPoint& p2) {return p1.pt.x > p2.pt.x; });
-
-    // erase duplicates
-    // outputKeypoints.erase(std::unique(outputKeypoints.begin(), outputKeypoints.end(), [](cv::KeyPoint& p1, cv::KeyPoint& p2) {
-    //     return std::hypot(p1.pt.x-p2.pt.x, p1.pt.y - p2.pt.y) < 10; }), outputKeypoints.end());
 }
 
 void showExtrinsicsReconstruction(const std::string &filename, const Matrix4f &pose,
                                   const Matrix3Xf &pointsLeftReconstructed, const Matrix3Xf &pointsRightReconstructed) {
     SimpleMesh outputMesh;
     for (int i = 0; i < pointsLeftReconstructed.cols(); i++) {
-        SimpleMesh point = SimpleMesh::sphere(pointsLeftReconstructed.col(i), 0.01f);
+        SimpleMesh point = SimpleMesh::sphere(pointsLeftReconstructed.col(i), 0.5f);
         outputMesh = SimpleMesh::joinMeshes(outputMesh, point);
-
     }
 
-    SimpleMesh cameraLeftMesh = SimpleMesh::camera(Matrix4f::Identity(), 0.01f);
-    SimpleMesh cameraRightMesh = SimpleMesh::camera(pose, 0.01f, Vector4uc(0, 255, 0, 255));
+    SimpleMesh cameraLeftMesh = SimpleMesh::camera(Matrix4f::Identity(), 0.05f);
+    SimpleMesh cameraRightMesh = SimpleMesh::camera(pose, 0.05f, Vector4uc(0, 255, 0, 255));
 
     SimpleMesh cameraMesh = SimpleMesh::joinMeshes(cameraLeftMesh, cameraRightMesh);
-    // outputMesh = SimpleMesh::joinMeshes(outputMesh, cameraMesh);
+    outputMesh = SimpleMesh::joinMeshes(outputMesh, cameraMesh);
 
     outputMesh.writeMesh(filename);
 }
@@ -155,13 +147,11 @@ int main(int argc, char **argv) {
 
     // estimate pose using the eight point algorithm
     // TODO read calib.txt to get camera matrices -> SDK?
-
-
     Matrix3f cameraLeft, cameraRight;
 
     // ArtL
-    cameraLeft << 1870, 0, 297, 0, 1870, 277, 0, 0, 1;
-    cameraRight << 1870, 0, 397, 0, 1870, 277, 0, 0, 1;
+    // cameraLeft << 1870, 0, 297, 0, 1870, 277, 0, 0, 1;
+    // cameraRight << 1870, 0, 397, 0, 1870, 277, 0, 0, 1;
 
     // Motorcycle
     cameraLeft << 1998.842, 0, 588.364, 0, 1998.842, 505.864, 0, 0, 1;
@@ -184,9 +174,24 @@ int main(int argc, char **argv) {
 
     std::cout << "Reconstructed 3D points left" << std::endl;
     std::cout << ep.getPointsLeftReconstructed() << std::endl;
-    // showExtrinsicsReconstruction("8pt_reconstruction.off", pose, ep.getPointsLeftReconstructed(), ep.getPointsRightReconstructed());
+    showExtrinsicsReconstruction("8pt_reconstruction.off", pose, ep.getPointsLeftReconstructed(), ep.getPointsRightReconstructed());
+
+
+    // TEST
+    Matrix3Xf rightPoints3D = ep.getPointsRightReconstructed();
+    MatrixXf leftToRightProjection = MatrixXf::Zero(3, rightPoints3D.cols());
+    leftToRightProjection = (cameraRight * rightPoints3D).cwiseQuotient(rightPoints3D.row(2).replicate(3, 1));
+    std::cout << leftToRightProjection << std::endl;
     // testVisualizationExtrinsics();
     // testCaseExtrinsics();
+
+    for (int i = 0; i < rightPoints3D.cols(); i++) {
+        cv::circle(imageRight, cv::Point(leftToRightProjection(0,i), leftToRightProjection(1,i)), 5.0, cv::Scalar(255, 0, 0));
+        cv::circle(imageRight, cv::Point(ep.getMatchesRight()(0,i), ep.getMatchesRight()(1,i)), 5.0, cv::Scalar(0, 255, 0));
+        cv::circle(imageRight, cv::Point(ep.getMatchesLeft()(0,i), ep.getMatchesLeft()(1,i)), 5.0, cv::Scalar(0, 0, 255));
+    }
+
+    cv::imwrite("../../results/greatImage.png", imageRight);
 
     return 0;
 }

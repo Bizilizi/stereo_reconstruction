@@ -115,6 +115,7 @@ bool EightPointAlgorithm::structureReconstruction(const Matrix3f &R, const Vecto
             idxSmallestEigenvalue = i;
         }
     }
+
     VectorXf V = es.eigenvectors().col(idxSmallestEigenvalue).real();
 
     // reconstruct depth
@@ -124,6 +125,8 @@ bool EightPointAlgorithm::structureReconstruction(const Matrix3f &R, const Vecto
     MatrixXf tmpPointsRightReconstructed = MatrixXf::Zero(3, numMatches);
     tmpPointsLeftReconstructed = pointsLeft.cwiseProduct(depthVec.transpose().replicate(3, 1));
     tmpPointsRightReconstructed = (R * tmpPointsLeftReconstructed) + T.replicate(1, numMatches);
+
+
 
     // check depth of all reconstructed points
     bool success =
