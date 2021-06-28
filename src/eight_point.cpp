@@ -30,10 +30,10 @@ void EightPointAlgorithm::run() {
     }
     JacobiSVD<MatrixXf> svdChi(chi, ComputeThinV);
     // extract essential matrix from last column of matrix V
-    essentialMatrix = svdChi.matrixV().block(0, 8, 9, 1).reshaped(3, 3);
+    Matrix3f essMatrix = svdChi.matrixV().block(0, 8, 9, 1).reshaped(3, 3);
 
     // project essential matrix onto normalized essential space using SVD
-    JacobiSVD<Matrix3f> svdEssential(essentialMatrix, ComputeFullU | ComputeFullV);
+    JacobiSVD<Matrix3f> svdEssential(essMatrix, ComputeFullU | ComputeFullV);
     // correct values of SVD
     MatrixXf matrixU = svdEssential.matrixU();
     MatrixXf matrixV = svdEssential.matrixV();
@@ -45,7 +45,7 @@ void EightPointAlgorithm::run() {
     }
     Matrix3f matrixSigma = Matrix3f::Identity();
     matrixSigma(2, 2) = 0;
-    essentialMatrix = matrixU * matrixSigma * matrixV.transpose();
+    essMatrix = matrixU * matrixSigma * matrixV.transpose();
 
     // recover displacement from essential matrix
     Matrix3f zRotation1 = Matrix3f::Zero();
@@ -86,6 +86,9 @@ void EightPointAlgorithm::run() {
         throw std::runtime_error("Depth reconstruction failed.");
     }
 
+    // set essential matrix
+    essentialMatrix = vectorAsSkew(validTranslation)*validRotation;
+
     // return estimated pose
     pose = Matrix4f::Identity();
     pose.block(0, 0, 3, 3) = validRotation;
@@ -117,25 +120,18 @@ bool EightPointAlgorithm::structureReconstruction(const Matrix3f &R, const Vecto
     // reconstruct depth
     float scale = V(last);
     VectorXf depthVec = V(seq(0, last - 1)) / scale; // make scale similar to scale of translation
-    pointsLeftReconstructed = pointsLeft.cwiseProduct(depthVec.transpose().replicate(3, 1));
-    pointsLeftReconstructed = (R * pointsRightReconstructed) + T.replicate(1, numMatches);
-
-#if 0
-    // Some logging
-    std::cout << "Eigenvalues:" << std::endl;
-    std::cout << eigenvalues << std::endl;
-    std::cout << "Smallest eigenvalue and its index " << smallestEigenvalue << "   " << idxSmallestEigenvalue << std::endl;
-    std::cout << "Vector corresponding to smallest eigenvalue:" << V << std::endl;
-
-    std::cout << "Reconstructed points left:" << std::endl;
-    std::cout << xLeftReconstructed << std::endl;
-    std::cout << "Reconstructed points right:" << std::endl;
-    std::cout << xLeftReconstructed << std::endl;
-#endif
+    MatrixXf tmpPointsLeftReconstructed = MatrixXf::Zero(3, numMatches);
+    MatrixXf tmpPointsRightReconstructed = MatrixXf::Zero(3, numMatches);
+    tmpPointsLeftReconstructed = pointsLeft.cwiseProduct(depthVec.transpose().replicate(3, 1));
+    tmpPointsRightReconstructed = (R * tmpPointsLeftReconstructed) + T.replicate(1, numMatches);
 
     // check depth of all reconstructed points
     bool success =
-            (pointsLeftReconstructed.row(2).array() >= 0).all() && (pointsRightReconstructed.row(2).array() >= 0).all();
+            (tmpPointsLeftReconstructed.row(2).array() >= 0).all() && (tmpPointsRightReconstructed.row(2).array() >= 0).all();
+    if (success) {
+        pointsLeftReconstructed = tmpPointsLeftReconstructed;
+        pointsRightReconstructed = tmpPointsRightReconstructed;
+    }
     return success;
 }
 
@@ -191,6 +187,10 @@ const Matrix4f &EightPointAlgorithm::getPose() const {
 
 const Matrix3f &EightPointAlgorithm::getEssentialMatrix() const {
     return essentialMatrix;
+}
+
+Matrix3f EightPointAlgorithm::getFundamentalMatrix() const {
+    return cameraLeft.transpose().inverse() * essentialMatrix * cameraLeft.inverse();
 }
 
 const Matrix3Xf &EightPointAlgorithm::getPointsLeftReconstructed() const {

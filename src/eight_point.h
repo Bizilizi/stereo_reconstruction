@@ -40,6 +40,8 @@ public:
 
     const Matrix3f &getEssentialMatrix() const;
 
+    Matrix3f getFundamentalMatrix() const;
+
     const Matrix3Xf &getPointsLeftReconstructed() const;
 
     const Matrix3Xf &getPointsRightReconstructed() const;

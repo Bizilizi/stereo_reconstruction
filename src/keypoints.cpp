@@ -15,24 +15,23 @@
 #include "SimpleMesh.h"
 
 
-void featureMatching(const cv::Mat& featuresLeft, const cv::Mat& featuresRight, std::vector<cv::DMatch>& outputMatches, float ratio_thresh=0.7f) {
+void featureMatching(const cv::Mat &featuresLeft, const cv::Mat &featuresRight, std::vector<cv::DMatch> &outputMatches,
+                     float ratio_thresh = 0.7f) {
     cv::Ptr<cv::DescriptorMatcher> matcher = cv::DescriptorMatcher::create(cv::DescriptorMatcher::FLANNBASED);
-    std::vector< std::vector<cv::DMatch> > knn_matches;
-    matcher->knnMatch(featuresLeft, featuresRight, knn_matches, 2 );
+    std::vector<std::vector<cv::DMatch> > knn_matches;
+    matcher->knnMatch(featuresLeft, featuresRight, knn_matches, 2);
 
     // filter matches using the Lowe's ratio test
-    for (auto & knn_match : knn_matches)
-    {
-        if (knn_match[0].distance < ratio_thresh * knn_match[1].distance)
-        {
+    for (auto &knn_match : knn_matches) {
+        if (knn_match[0].distance < ratio_thresh * knn_match[1].distance) {
             outputMatches.push_back(knn_match[0]);
         }
     }
 }
 
 
-void SIFTKeypointDetection(const cv::Mat &image, std::vector<cv::KeyPoint> &outputKeypoints, cv::Mat& outputDescriptor,
-                           const float edgeThreshold = 10, const float contrastThreshold = 0.04){
+void SIFTKeypointDetection(const cv::Mat &image, std::vector<cv::KeyPoint> &outputKeypoints, cv::Mat &outputDescriptor,
+                           const float edgeThreshold = 10, const float contrastThreshold = 0.04) {
     // detect outputKeypoints using SIFT
     cv::Ptr<cv::SIFT> detector = cv::SIFT::create(100, 3, contrastThreshold, edgeThreshold);
     detector->detectAndCompute(image, cv::noArray(), outputKeypoints, outputDescriptor);
@@ -63,7 +62,7 @@ void showExtrinsicsReconstruction(const std::string &filename, const Matrix4f &p
     outputMesh.writeMesh(filename);
 }
 
-void testVisualizationExtrinsics(){
+void testVisualizationExtrinsics() {
     Matrix3Xf leftPoints, rightPoints;
     leftPoints = Matrix3f::Zero(3, 3);
     leftPoints.col(0) = Vector3f(1, 0, 0);
@@ -73,11 +72,50 @@ void testVisualizationExtrinsics(){
     showExtrinsicsReconstruction("8pt_reconstruction_test.off", Matrix4f::Identity(), leftPoints, rightPoints);
 }
 
+void testCaseExtrinsics() {
+    // matching keypoint pairs in pixel coordinates
+    MatrixXf kpLeftMat(3, 12), kpRightMat(3, 12);
 
-int main(int argc, char** argv) {
+    kpLeftMat << 10.0, 92.0, 8.0, 92.0, 289.0, 354.0, 289.0, 353.0, 69.0, 294.0, 44.0, 336.0, // x
+            232.0, 230.0, 334.0, 333.0, 230.0, 278.0, 340.0, 332.0, 90.0, 149.0, 475.0, 433.0, //y
+            1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1; // z
+
+    kpRightMat << 123.0, 203.0, 123.0, 202.0, 397.0, 472.0, 398.0, 472.0, 182.0, 401.0, 148.0, 447.0, // x
+            239.0, 237.0, 338.0, 338.0, 236.0, 286.0, 348.0, 341.0, 99.0, 153.0, 471.0, 445.0, // y
+            1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1; // z
+
+    // camera intrinsics
+    Matrix3f cameraLeft, cameraRight;
+    cameraLeft << 844.310547, 0, 243.413315, 0, 1202.508301, 281.529236, 0, 0, 1;
+    cameraRight << 852.721008, 0, 252.021805, 0, 1215.657349, 288.587189, 0, 0, 1;
+
+    EightPointAlgorithm ep(kpLeftMat, kpRightMat, cameraLeft, cameraRight);
+    std::cout << "POSE: " << std::endl << ep.getPose() << std::endl;
+
+    // check results
+    Matrix4f referencePose = Matrix4f::Identity();
+    referencePose(seqN(0, 3), seqN(0, 3)) << 0.9911, -0.0032, 0.1333,
+            0.0032, 1.0, 0.0,
+            -0.1333, 0.0004, 0.9911;
+    referencePose(seqN(0, 3), 3) << -0.4427, -0.0166, 0.8965;
+    float err = (ep.getPose() - referencePose).norm();
+    std::cout << "Error norm: " << err << std::endl;
+
+    Matrix3f referencePoints3D;
+    referencePoints3D << -5.7313, -5.0535, -7.0558,
+            -0.8539, -1.2075, 1.1042,
+            20.7315, 28.1792, 25.3056;
+    std::cout << "Reconstructed 3d points:" << std::endl << ep.getPointsLeftReconstructed() << std::endl;
+    std::cout << "Error norm: " << (ep.getPointsLeftReconstructed()(seqN(0, 3), seqN(0, 3)) - referencePoints3D).norm()
+              << std::endl;
+
+    std::cout << "Fundamental Matrix" << ep.getFundamentalMatrix() << std::endl;
+}
+
+int main(int argc, char **argv) {
     std::string image_path;
     if (argc == 1) {
-        image_path = getCurrentDirectory() + "/../../data/MiddEval3/trainingH/ArtL";
+        image_path = getCurrentDirectory() + "/../../data/MiddEval3/trainingH/Motorcycle";
     } else {
         image_path = std::string(argv[1]);
     }
@@ -85,7 +123,7 @@ int main(int argc, char** argv) {
     // load stereo images
     cv::Mat imageLeft = cv::imread(image_path + "/im0.png", cv::IMREAD_COLOR);
     cv::Mat imageRight = cv::imread(image_path + "/im1.png", cv::IMREAD_COLOR);
-    if ( !imageLeft.data || !imageRight.data) {
+    if (!imageLeft.data || !imageRight.data) {
         std::cout << "No image data. Check file path!" << std::endl;
         return -1;
     }
@@ -110,42 +148,46 @@ int main(int argc, char** argv) {
 
     // visualization of feature matching
     cv::Mat img_matches;
-    cv::drawMatches( imageLeft, keypointsLeft, imageRight, keypointsRight, matches, img_matches, cv::Scalar::all(-1),
-                     cv::Scalar::all(-1), std::vector<char>(), cv::DrawMatchesFlags::NOT_DRAW_SINGLE_POINTS );
+    cv::drawMatches(imageLeft, keypointsLeft, imageRight, keypointsRight, matches, img_matches, cv::Scalar::all(-1),
+                    cv::Scalar::all(-1), std::vector<char>(), cv::DrawMatchesFlags::NOT_DRAW_SINGLE_POINTS);
     cv::imwrite("../../results/matching_flann.png", img_matches);
 
 
     // estimate pose using the eight point algorithm
     // TODO read calib.txt to get camera matrices -> SDK?
-    Matrix3f cameraLeft;
+
+
+    Matrix3f cameraLeft, cameraRight;
+
+    // ArtL
     cameraLeft << 1870, 0, 297, 0, 1870, 277, 0, 0, 1;
-    Matrix3f cameraRight;
     cameraRight << 1870, 0, 397, 0, 1870, 277, 0, 0, 1;
 
+    // Motorcycle
+    cameraLeft << 1998.842, 0, 588.364, 0, 1998.842, 505.864, 0, 0, 1;
+    cameraRight << 1998.842, 0, 653.919, 0, 1998.842, 505.864, 0, 0, 1;
     Matrix3Xf kpLeftMat, kpRightMat;
     transformMatchedKeypointsToEigen(keypointsLeft, keypointsRight, matches, kpLeftMat, kpRightMat);
 
-#if 1
-    // some testing
-    std::cout << "Unfiltered matrix" << std::endl;
-    std::cout << kpLeftMat << std::endl;
-    std::cout << "Filtered matrix" << std::endl;
-
-    auto uniqueIdx = uniqueColumnsInMatrix(kpLeftMat);
-    std::cout << kpLeftMat(all, uniqueIdx) << std::endl;
-
-#endif
-
     EightPointAlgorithm ep(kpLeftMat, kpRightMat, cameraLeft, cameraRight);
-    Matrix4f pose = ep.getPose();
-    Matrix3f esentialMatrix = ep.getEssentialMatrix();
+    std::cout << "Keypoints left (in Pixel coordinates): " << std::endl;
+    std::cout << ep.getMatchesLeft() << std::endl;
+    std::cout << "Points left (after applying inverse intrinsics): " << std::endl;
+    std::cout << cameraLeft.inverse() * ep.getMatchesLeft() << std::endl;
 
+    Matrix3f essentialMatrix = ep.getEssentialMatrix();
+    std::cout << "Essential Matrix: " << std::endl << essentialMatrix << std::endl;
+
+    Matrix4f pose = ep.getPose();
     std::cout << "Pose: " << std::endl;
     std::cout << pose << std::endl;
 
+    std::cout << "Reconstructed 3D points left" << std::endl;
     std::cout << ep.getPointsLeftReconstructed() << std::endl;
     // showExtrinsicsReconstruction("8pt_reconstruction.off", pose, ep.getPointsLeftReconstructed(), ep.getPointsRightReconstructed());
-    testVisualizationExtrinsics();
+    // testVisualizationExtrinsics();
+    // testCaseExtrinsics();
+
     return 0;
 }
 
