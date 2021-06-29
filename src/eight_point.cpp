@@ -28,6 +28,7 @@ void EightPointAlgorithm::run() {
     for (int i = 0; i < numMatches; i++) {
         chi(i, seqN(0, 9)) = kron(pointsLeft.col(i), pointsRight.col(i));
     }
+
     JacobiSVD<MatrixXf> svdChi(chi, ComputeThinV);
     // extract essential matrix from last column of matrix V
     Matrix3f essMatrix = svdChi.matrixV().block(0, 8, 9, 1).reshaped(3, 3);
@@ -45,7 +46,6 @@ void EightPointAlgorithm::run() {
     }
     Matrix3f matrixSigma = Matrix3f::Identity();
     matrixSigma(2, 2) = 0;
-    essMatrix = matrixU * matrixSigma * matrixV.transpose();
 
     // recover displacement from essential matrix
     Matrix3f zRotation1 = Matrix3f::Zero();
@@ -126,8 +126,6 @@ bool EightPointAlgorithm::structureReconstruction(const Matrix3f &R, const Vecto
     tmpPointsLeftReconstructed = pointsLeft.cwiseProduct(depthVec.transpose().replicate(3, 1));
     tmpPointsRightReconstructed = (R * tmpPointsLeftReconstructed) + T.replicate(1, numMatches);
 
-
-
     // check depth of all reconstructed points
     bool success =
             (tmpPointsLeftReconstructed.row(2).array() >= 0).all() && (tmpPointsRightReconstructed.row(2).array() >= 0).all();
@@ -204,7 +202,6 @@ const Matrix3Xf &EightPointAlgorithm::getPointsRightReconstructed() const {
     return pointsRightReconstructed;
 }
 
-
 Matrix3f vectorAsSkew(const Vector3f &vec) {
     Matrix3f skewMatrix = Matrix3f::Zero();
     // upper triangular matrix
@@ -218,7 +215,6 @@ Matrix3f vectorAsSkew(const Vector3f &vec) {
     return skewMatrix;
 }
 
-
 VectorXf kron(const VectorXf &vec1, const VectorXf &vec2) {
     int n = (int) vec1.size();
     int m = (int) vec2.size();
@@ -230,7 +226,6 @@ VectorXf kron(const VectorXf &vec1, const VectorXf &vec2) {
 
     return out;
 }
-
 
 void transformMatchedKeypointsToEigen(const std::vector<cv::KeyPoint> &keypointsLeft,
                                       const std::vector<cv::KeyPoint> &keypointsRight,
@@ -267,4 +262,3 @@ std::vector<int> uniqueColumnsInMatrix(const Matrix3Xf &pointMat, float tol) {
     }
     return uniqueIdx;
 }
-

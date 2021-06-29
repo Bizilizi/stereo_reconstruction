@@ -33,9 +33,21 @@ void featureMatching(const cv::Mat &featuresLeft, const cv::Mat &featuresRight, 
 void SIFTKeypointDetection(const cv::Mat &image, std::vector<cv::KeyPoint> &outputKeypoints, cv::Mat &outputDescriptor,
                            const float edgeThreshold = 10, const float contrastThreshold = 0.04) {
     // detect outputKeypoints using SIFT
-    cv::Ptr<cv::SIFT> detector = cv::SIFT::create(500, 3, contrastThreshold, edgeThreshold);
+    cv::Ptr<cv::SIFT> detector = cv::SIFT::create(50, 3, contrastThreshold, edgeThreshold);
     detector->detectAndCompute(image, cv::noArray(), outputKeypoints, outputDescriptor);
 }
+
+
+float calculateEuclideanAveragePixelError(const MatrixXf& leftToRightProjection, const MatrixXf& matchesRight) {
+    VectorXf errors = VectorXf::Zero(leftToRightProjection.cols());
+    for (int col=0; col < leftToRightProjection.cols(); col++) {
+        errors(col) = sqrt(powf(leftToRightProjection(0, col) - matchesRight(0, col), 2) +
+                           powf(leftToRightProjection(1, col) - matchesRight(1, col), 2));
+    }
+    std::cout << errors.transpose() << std::endl;
+    return errors.sum() / (float) leftToRightProjection.cols();
+}
+
 
 void showExtrinsicsReconstruction(const std::string &filename, const Matrix4f &pose,
                                   const Matrix3Xf &pointsLeftReconstructed, const Matrix3Xf &pointsRightReconstructed) {
@@ -54,6 +66,60 @@ void showExtrinsicsReconstruction(const std::string &filename, const Matrix4f &p
     outputMesh.writeMesh(filename);
 }
 
+
+EightPointAlgorithm RANSAC(const MatrixXf& kpLeftMat, const MatrixXf& kpRightMat, const Matrix3f& cameraLeft, const Matrix3f& cameraRight) {
+    // hyperparameters
+    int maxSamples = 100;
+    int numPoints = 12;
+    float errorThreshold = 3.;
+
+    MatrixXf sampledKpLeft, sampledKpRight;
+    sampledKpLeft = MatrixXf::Zero(3,numPoints);
+    sampledKpRight = MatrixXf::Zero(3, numPoints);
+
+    for (int i=0; i < maxSamples; i++){
+        // create set of 8 random indices
+        std::vector<int> randomIndices;
+        while (randomIndices.size() < numPoints) {
+            int index = rand() % kpLeftMat.cols();
+            if(std::find(randomIndices.begin(), randomIndices.end(), index) == randomIndices.end()) {
+                randomIndices.emplace_back(index);
+            }
+        }
+        // create subset of matches based on random indices
+        for (int j=0; j < randomIndices.size(); j++) {
+            sampledKpLeft.block(0, j, 3, 1) = kpLeftMat.block(0, randomIndices[j], 3, 1);
+            sampledKpRight.block(0, j, 3, 1) = kpRightMat.block(0, randomIndices[j], 3, 1);
+        }
+
+        // estimate extrinsics
+        try {
+            EightPointAlgorithm ep(sampledKpLeft, sampledKpRight, cameraLeft, cameraRight);
+
+            // compute projection of left image keypoints to the right one
+            Matrix3Xf rightPoints3D = ep.getPointsRightReconstructed();
+            MatrixXf leftToRightProjection = MatrixXf::Zero(3, rightPoints3D.cols());
+            leftToRightProjection = (cameraRight * rightPoints3D).cwiseQuotient(rightPoints3D.row(2).replicate(3, 1));
+
+            std::cout << "Found a solution!" << std::endl;
+
+            // compute pixel error
+            float error = calculateEuclideanAveragePixelError(leftToRightProjection, ep.getMatchesRight());
+            std::cout << error << std::endl;
+            if (error < errorThreshold) {
+                // break random sampling
+                return ep;
+            }
+        } catch (std::runtime_error& e) {
+            // invalid depth computed, try next set
+            std::cout << e.what() << std::endl;
+        }
+    }
+    // no success
+    throw std::runtime_error("None of the estimated extrinsics was accurate enough!");
+}
+
+
 void testVisualizationExtrinsics() {
     Matrix3Xf leftPoints, rightPoints;
     leftPoints = Matrix3f::Zero(3, 3);
@@ -63,6 +129,7 @@ void testVisualizationExtrinsics() {
 
     showExtrinsicsReconstruction("8pt_reconstruction_test.off", Matrix4f::Identity(), leftPoints, rightPoints);
 }
+
 
 void testCaseExtrinsics() {
     // matching keypoint pairs in pixel coordinates
@@ -104,10 +171,11 @@ void testCaseExtrinsics() {
     std::cout << "Fundamental Matrix" << ep.getFundamentalMatrix() << std::endl;
 }
 
+
 int main(int argc, char **argv) {
     std::string image_path;
     if (argc == 1) {
-        image_path = getCurrentDirectory() + "/../../data/MiddEval3/trainingH/Motorcycle";
+        image_path = getCurrentDirectory() + "/../../data/MiddEval3/trainingH/Pipes";
     } else {
         image_path = std::string(argv[1]);
     }
@@ -123,7 +191,7 @@ int main(int argc, char **argv) {
     // find keypoints
     std::vector<cv::KeyPoint> keypointsLeft, keypointsRight;
     cv::Mat featuresLeft, featuresRight;
-    // FIXME: Filter out double matches!
+
     SIFTKeypointDetection(imageLeft, keypointsLeft, featuresLeft);
     SIFTKeypointDetection(imageRight, keypointsRight, featuresRight);
 
@@ -150,16 +218,26 @@ int main(int argc, char **argv) {
     Matrix3f cameraLeft, cameraRight;
 
     // ArtL
-    // cameraLeft << 1870, 0, 297, 0, 1870, 277, 0, 0, 1;
-    // cameraRight << 1870, 0, 397, 0, 1870, 277, 0, 0, 1;
+    //cameraLeft << 1870, 0, 297, 0, 1870, 277, 0, 0, 1;
+    //cameraRight << 1870, 0, 397, 0, 1870, 277, 0, 0, 1;
 
     // Motorcycle
-    cameraLeft << 1998.842, 0, 588.364, 0, 1998.842, 505.864, 0, 0, 1;
-    cameraRight << 1998.842, 0, 653.919, 0, 1998.842, 505.864, 0, 0, 1;
+    //cameraLeft << 1998.842, 0, 588.364, 0, 1998.842, 505.864, 0, 0, 1;
+    //cameraRight << 1998.842, 0, 653.919, 0, 1998.842, 505.864, 0, 0, 1;
+
+    // PianoL
+    //cameraLeft << 1426.379, 0, 712.043, 0, 1426.379, 476.526, 0, 0, 1;
+    //cameraRight << 1426.379, 0, 774.722, 0, 1426.379, 476.526, 0, 0, 1;
+
+    // Pipes
+    cameraLeft << 1979.773, 0, 785.885, 0, 1979.773, 486.442, 0, 0, 1;
+    cameraRight << 1979.773, 0, 824.548, 0, 1979.773, 486.442, 0, 0, 1;
+
     Matrix3Xf kpLeftMat, kpRightMat;
     transformMatchedKeypointsToEigen(keypointsLeft, keypointsRight, matches, kpLeftMat, kpRightMat);
 
-    EightPointAlgorithm ep(kpLeftMat, kpRightMat, cameraLeft, cameraRight);
+    EightPointAlgorithm ep = RANSAC(kpLeftMat, kpRightMat, cameraLeft, cameraRight);
+    /*
     std::cout << "Keypoints left (in Pixel coordinates): " << std::endl;
     std::cout << ep.getMatchesLeft() << std::endl;
     std::cout << "Points left (after applying inverse intrinsics): " << std::endl;
@@ -175,20 +253,23 @@ int main(int argc, char **argv) {
     std::cout << "Reconstructed 3D points left" << std::endl;
     std::cout << ep.getPointsLeftReconstructed() << std::endl;
     showExtrinsicsReconstruction("8pt_reconstruction.off", pose, ep.getPointsLeftReconstructed(), ep.getPointsRightReconstructed());
-
+    */
 
     // TEST
     Matrix3Xf rightPoints3D = ep.getPointsRightReconstructed();
     MatrixXf leftToRightProjection = MatrixXf::Zero(3, rightPoints3D.cols());
     leftToRightProjection = (cameraRight * rightPoints3D).cwiseQuotient(rightPoints3D.row(2).replicate(3, 1));
+
+    std::cout << "compare matches in pixel coordinates:" << std::endl;
+    std::cout << ep.getMatchesRight() << std::endl;
     std::cout << leftToRightProjection << std::endl;
     // testVisualizationExtrinsics();
     // testCaseExtrinsics();
 
     for (int i = 0; i < rightPoints3D.cols(); i++) {
-        cv::circle(imageRight, cv::Point(leftToRightProjection(0,i), leftToRightProjection(1,i)), 5.0, cv::Scalar(255, 0, 0));
-        cv::circle(imageRight, cv::Point(ep.getMatchesRight()(0,i), ep.getMatchesRight()(1,i)), 5.0, cv::Scalar(0, 255, 0));
-        cv::circle(imageRight, cv::Point(ep.getMatchesLeft()(0,i), ep.getMatchesLeft()(1,i)), 5.0, cv::Scalar(0, 0, 255));
+        cv::circle(imageRight, cv::Point(leftToRightProjection(0,i), leftToRightProjection(1,i)), 5.0, cv::Scalar(255, 0, 0), 4);
+        cv::circle(imageRight, cv::Point(ep.getMatchesRight()(0,i), ep.getMatchesRight()(1,i)), 5.0, cv::Scalar(0, 255, 0), 4);
+        //cv::circle(imageRight, cv::Point(ep.getMatchesLeft()(0,i), ep.getMatchesLeft()(1,i)), 5.0, cv::Scalar(0, 255, 255), 4);
     }
 
     cv::imwrite("../../results/greatImage.png", imageRight);
