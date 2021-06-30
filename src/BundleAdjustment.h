@@ -11,6 +11,8 @@
 
 #include "Eigen.h"
 
+#define N_POINTS 9      //TODO: change to 12 later
+
 /**
  * NOTE: Taken from lecture, exercise 5
  * Helper methods for writing Ceres cost functions.
@@ -125,39 +127,45 @@ private:
     T *m_array;
 };
 
-/*
+
 class BundleAdjustmentConstraint {
 public:
-    BundleAdjustmentConstraint(const Vector3f &keypoint, const Matrix3f &intrinsics, const int idx) :
-            m_keypoint{keypoint}, m_intrinsics{intrinsics}, m_idx(idx) {}
+    BundleAdjustmentConstraint(const Vector3f &keypoint, const Matrix3f &intrinsics, int idx, bool applyTransformation) :
+            m_keypoint{keypoint}, m_intrinsics{intrinsics}, m_idx{idx}, m_applyTransformation{applyTransformation} {}
 
-    template <typename T>
+     template <typename T>
     bool operator()(const T *const vars, T *residuals) const {
         // get pose from vars
         PoseIncrement<T> poseIncrement = PoseIncrement<T>(const_cast<T *const>(vars));
+        // poseIncrement.print();
 
-        // get corresponding point from vars
+        T transformedPoint3D[3];
 
-        T point3D[3];
-        fillVector(point3D, vars + 6 + m_idx * 3);
-
-        // transform 3d point using current pose
-        T transformedPoint3D[3]
-        poseIncrement.apply(point3D, &transformedPoint3D);
+        if (m_applyTransformation) {
+            // transform 3d point using current pose
+            T point3D[3];
+            fillVector(vars + 6 + 3*m_idx, &point3D[0]);
+            poseIncrement.apply(&point3D[0], &transformedPoint3D[0]);
+        } else {
+            // only apply projection 3D > 2D
+            fillVector(vars + 6 + 3*m_idx, &transformedPoint3D[0]);
+        }
 
         // use Eigen to backproject 3D point to 2D image plane
-        Vector<T, 3, 1> projectedPoint{transformedPoint3D};
+        Vector<T, 3> projectedPoint{transformedPoint3D};
         projectedPoint = (m_intrinsics.cast<T>() * projectedPoint) / projectedPoint[2];
 
         // residual
         residuals[0] = T(m_keypoint[0]) - projectedPoint[0];
-        residuals[1] = T(m_keypoint[0]) - projectedPoint[0];
+        residuals[1] = T(m_keypoint[1]) - projectedPoint[1];
+
+        return true;
     }
 
     static ceres::CostFunction *
-    create(const Vector3f &sourcePoint, const Vector3f &targetPoint, const Vector3f &targetNormal, const float weight) {
-        return new ceres::AutoDiffCostFunction<PointToPlaneConstraint, 1, 6>( //FIXME TODO
-                new BundleAdjustmentConstraint(sourcePoint, targetPoint, targetNormal, weight)
+    create(const Vector3f &keypoint, const Matrix3f &intrinsics, int idx, bool applyTransform) {
+        return new ceres::AutoDiffCostFunction<BundleAdjustmentConstraint, 2, 6 + 3 * N_POINTS>(
+                new BundleAdjustmentConstraint(keypoint, intrinsics, idx, applyTransform)
         );
     }
 
@@ -166,8 +174,9 @@ private:
     const Vector3f m_keypoint;          // in homogenous coordinates
     const Matrix3f m_intrinsics;
     const int m_idx;
+    const bool m_applyTransformation;
 };
-*/
+
 
 
 class SimpleConstraint {
@@ -228,26 +237,30 @@ public:
                               const Matrix3f &intrinsicsRight,
                               const Matrix3f &initRotation,
                               const Vector3f &initTranslation,
-                              const Matrix3Xf &leftPoints3D) : // Todo: Remove and add to optimization
+                              const Matrix3Xf &initLeftPoints3D) : // Todo: Remove and add to optimization
             m_matchesLeft{matchesLeft},
             m_matchesRight{matchesRight},
             m_intrinsicsLeft{intrinsicsLeft},
             m_intrinsicsRight{intrinsicsRight},
             m_initRotation{initRotation},
             m_initTranslation{initTranslation},
-            m_leftPoints3D{leftPoints3D} {};
+            m_initLeftPoints3D{initLeftPoints3D} {
+        if (initLeftPoints3D.cols() != N_POINTS){
+            throw std::runtime_error("BundleAdjustmentOptimizer: Number of points does not match.");
+        }
+    };
 
     Matrix4f estimatePose() {
-        double incrementArray[6];
-        auto poseIncrement = PoseIncrement<double>(incrementArray);
+        double vars[6 + N_POINTS*3];
+        auto poseIncrement = PoseIncrement<double>(vars);
         ceres::Problem problem;
-        prepareConstraints(poseIncrement, problem);
+        prepareConstraints(poseIncrement, vars, problem);
 
         // Configure options for the solver.
         ceres::Solver::Options options;
         configureSolver(options);
 
-        // Run the solver (for one iteration).
+        // Run the solver
         ceres::Solver::Summary summary;
         ceres::Solve(options, &problem, &summary);
         std::cout << summary.BriefReport() << std::endl;
@@ -256,24 +269,26 @@ public:
 
 private:
 
-    void prepareConstraints(PoseIncrement<double> &poseIncrement, ceres::Problem &problem) {
+    void prepareConstraints(PoseIncrement<double> &poseIncrement, double* vars, ceres::Problem &problem) {
         int nPoints = (int) m_matchesLeft.cols();
 
+        // inititalize pose and 3D points
         poseIncrement.setData(rotationToAngleAxis(m_initRotation), m_initTranslation);
+        for(int i = 0; i < N_POINTS; i++){
+            vars[6+ i*3] = m_initLeftPoints3D(0, i);
+            vars[6+ i*3 +1] = m_initLeftPoints3D(1, i);
+            vars[6+ i*3 +2] = m_initLeftPoints3D(2, i);
+        }
 
-        // TODO
-        std::cout << "Comparison AngleAxis conversion: " << std::endl;
-        std::cout << m_initRotation << std::endl;
-        std::cout << PoseIncrement<double>::convertToMatrix(poseIncrement) << std::endl;
-
+        // initialize residuals
         for (int i = 0; i < nPoints; i++) {
             // left points: do not apply transformation
             bool applyTransformation = false;
-            problem.AddResidualBlock(SimpleConstraint::create(m_matchesLeft.col(i), m_intrinsicsLeft, m_leftPoints3D.col(i), applyTransformation),
+            problem.AddResidualBlock(BundleAdjustmentConstraint::create(m_matchesLeft.col(i), m_intrinsicsLeft, i, applyTransformation),
                                      nullptr, poseIncrement.getData());
             // right points: apply transformation
             applyTransformation = true;
-            problem.AddResidualBlock(SimpleConstraint::create(m_matchesRight.col(i), m_intrinsicsRight, m_leftPoints3D.col(i), applyTransformation),
+            problem.AddResidualBlock(BundleAdjustmentConstraint::create(m_matchesRight.col(i), m_intrinsicsRight, i, applyTransformation),
                                      nullptr, poseIncrement.getData());
         }
 
@@ -299,7 +314,7 @@ private:
     Matrix3f m_intrinsicsRight;
     Matrix3f m_initRotation;
     Vector3f m_initTranslation;
-    Matrix3Xf m_leftPoints3D;
+    Matrix3Xf m_initLeftPoints3D;
 
 };
 
