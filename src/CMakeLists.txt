@@ -20,7 +20,8 @@ set(HEADERS
     Eigen.h
     directory.h
     eight_point.h
-    SimpleMesh.h)
+    SimpleMesh.h
+    BundleAdjustment.h)
 
 set(SOURCES
     directory.cpp eight_point.cpp)
@@ -30,6 +31,8 @@ set(SOURCES
 
 add_executable(test_loading test_loading.cpp ${HEADERS} ${SOURCES})
 add_executable(keypoints keypoints.cpp ${HEADERS} ${SOURCES})
+add_executable(test_bundle_adjustment test_bundle_adjustment.cpp ${HEADERS} ${SOURCES})
+
 
 #############################################################################################
 # Linking
@@ -37,9 +40,13 @@ add_executable(keypoints keypoints.cpp ${HEADERS} ${SOURCES})
 #target_link_libraries(main ${OpenCV_LIBS})
 target_link_libraries(test_loading ${OpenCV_LIBS})
 target_link_libraries(keypoints ${OpenCV_LIBS})
+target_link_libraries(test_bundle_adjustment ${OpenCV_LIBS})
+
 #target_include_directories(main PUBLIC ${Eigen3_INCLUDE_DIR})
 target_include_directories(test_loading PUBLIC ${Eigen3_INCLUDE_DIR})
 target_include_directories(keypoints PUBLIC ${Eigen3_INCLUDE_DIR})
+target_include_directories(test_bundle_adjustment PUBLIC ${Eigen3_INCLUDE_DIR})
 
+target_link_libraries(test_bundle_adjustment ceres)
 #target_link_libraries(dragon ceres)
 #target_link_libraries(surface ceres)

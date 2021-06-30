@@ -78,7 +78,7 @@ EightPointAlgorithm RANSAC(const MatrixXf& kpLeftMat, const MatrixXf& kpRightMat
     sampledKpRight = MatrixXf::Zero(3, numPoints);
 
     for (int i=0; i < maxSamples; i++){
-        // create set of 8 random indices
+        // create set of numPoints random indices
         std::vector<int> randomIndices;
         while (randomIndices.size() < numPoints) {
             int index = rand() % kpLeftMat.cols();
@@ -236,7 +236,9 @@ int main(int argc, char **argv) {
     Matrix3Xf kpLeftMat, kpRightMat;
     transformMatchedKeypointsToEigen(keypointsLeft, keypointsRight, matches, kpLeftMat, kpRightMat);
 
-    EightPointAlgorithm ep = RANSAC(kpLeftMat, kpRightMat, cameraLeft, cameraRight);
+    EightPointAlgorithm dirtyFix(kpLeftMat, kpRightMat, cameraLeft, cameraRight);
+
+    EightPointAlgorithm ep = RANSAC(dirtyFix.getMatchesLeft(), dirtyFix.getMatchesRight(), cameraLeft, cameraRight);
     /*
     std::cout << "Keypoints left (in Pixel coordinates): " << std::endl;
     std::cout << ep.getMatchesLeft() << std::endl;
@@ -281,9 +283,11 @@ int main(int argc, char **argv) {
 
 
 /**
-* TODO:
+* TODO: next week/future
  *
- * [1. Ransac Outlier filtern] (next week)
+ * 1. RANSAC:
+ *      - just sample 2 or 3 new indices -> kick out the worst performing and set black list
+ *      - embed RANSAC as boolean parameter in class and set mask for indices (somewhere in set/update data)
  *
  * 2. Optimization: Redefinement of results of 8 pt algorithm (Eigen)
  *      - BundleAdjustment (Ceres)
