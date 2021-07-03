@@ -1,36 +1,37 @@
 cmake_minimum_required(VERSION 3.6)
 
-set( CMAKE_CONFIGURATION_TYPES Debug Release CACHE TYPE INTERNAL FORCE )
-project( stereo_reconstruction )
-set( CMAKE_CXX_STANDARD 14 )
+set(CMAKE_CONFIGURATION_TYPES Debug Release CACHE TYPE INTERNAL FORCE)
+project(stereo_reconstruction)
+set(CMAKE_CXX_STANDARD 14)
 
 #############################################################################################
 # Package Requirements
-find_package( Ceres REQUIRED )
-find_package( OpenCV REQUIRED )
-include_directories( ${OpenCV_INCLUDE_DIRS} )
+find_package(Ceres REQUIRED)
+find_package(OpenCV REQUIRED)
+find_package(Eigen3 REQUIRED NO_MODULE)
 
-set(LIBRARY_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../libs CACHE PATH "Path to lib folder")
-set(Eigen3_INCLUDE_DIR ${LIBRARY_DIR}/eigen-3.4/ CACHE PATH "Path to Eigen source folder")
+include_directories(${OpenCV_INCLUDE_DIRS})
+include_directories(${EIGEN_INCLUDE_DIR})
 
 #############################################################################################
 # Header / Source Files
 
 set(HEADERS
-    Eigen.h
-    directory.h
-    eight_point.h
-    SimpleMesh.h
-    BundleAdjustment.h)
+        Eigen.h
+        directory.h
+        eight_point.h
+        SimpleMesh.h
+        BundleAdjustment.h
+        rectification/rectification.hpp)
 
 set(SOURCES
-    directory.cpp eight_point.cpp)
+        directory.cpp eight_point.cpp rectification/rectification.cpp)
 
 #############################################################################################
 # Executables
 
 add_executable(test_loading test_loading.cpp ${HEADERS} ${SOURCES})
-add_executable(keypoints keypoints.cpp ${HEADERS} ${SOURCES})
+add_executable(rectification rectification_main.cpp ${HEADERS} ${SOURCES})
 add_executable(test_bundle_adjustment test_bundle_adjustment.cpp ${HEADERS} ${SOURCES})
 
 
@@ -39,13 +40,13 @@ add_executable(test_bundle_adjustment test_bundle_adjustment.cpp ${HEADERS} ${SO
 
 #target_link_libraries(main ${OpenCV_LIBS})
 target_link_libraries(test_loading ${OpenCV_LIBS})
-target_link_libraries(keypoints ${OpenCV_LIBS})
+target_link_libraries(rectification ${OpenCV_LIBS})
 target_link_libraries(test_bundle_adjustment ${OpenCV_LIBS})
 
 #target_include_directories(main PUBLIC ${Eigen3_INCLUDE_DIR})
-target_include_directories(test_loading PUBLIC ${Eigen3_INCLUDE_DIR})
-target_include_directories(keypoints PUBLIC ${Eigen3_INCLUDE_DIR})
-target_include_directories(test_bundle_adjustment PUBLIC ${Eigen3_INCLUDE_DIR})
+target_link_libraries(test_loading Eigen3::Eigen)
+target_link_libraries(rectification Eigen3::Eigen)
+target_link_libraries(test_bundle_adjustment Eigen3::Eigen)
 
 target_link_libraries(test_bundle_adjustment ceres)
 #target_link_libraries(dragon ceres)
