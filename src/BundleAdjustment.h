@@ -11,7 +11,7 @@
 
 #include "Eigen.h"
 
-#define N_POINTS 9      //TODO: change to 12 later
+#define N_POINTS 12      //TODO: change to 12 later
 
 /**
  * NOTE: Taken from lecture, exercise 5

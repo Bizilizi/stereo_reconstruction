@@ -9,10 +9,14 @@
 #include <opencv2/highgui.hpp>
 #include <opencv2/features2d.hpp>
 
+#include <random>
+#include <algorithm>
+
 #include "Eigen.h"
 #include "directory.h"
 #include "eight_point.h"
 #include "SimpleMesh.h"
+#include "BundleAdjustment.h"
 
 
 void featureMatching(const cv::Mat &featuresLeft, const cv::Mat &featuresRight, std::vector<cv::DMatch> &outputMatches,
@@ -33,19 +37,20 @@ void featureMatching(const cv::Mat &featuresLeft, const cv::Mat &featuresRight, 
 void SIFTKeypointDetection(const cv::Mat &image, std::vector<cv::KeyPoint> &outputKeypoints, cv::Mat &outputDescriptor,
                            const float edgeThreshold = 10, const float contrastThreshold = 0.04) {
     // detect outputKeypoints using SIFT
-    cv::Ptr<cv::SIFT> detector = cv::SIFT::create(50, 3, contrastThreshold, edgeThreshold);
+    cv::Ptr<cv::SIFT> detector = cv::SIFT::create(100, 3, contrastThreshold, edgeThreshold);
     detector->detectAndCompute(image, cv::noArray(), outputKeypoints, outputDescriptor);
 }
 
 
-float calculateEuclideanAveragePixelError(const MatrixXf& leftToRightProjection, const MatrixXf& matchesRight) {
+VectorXf calculateEuclideanPixelError(const MatrixXf &leftToRightProjection, const MatrixXf &matchesRight) {
     VectorXf errors = VectorXf::Zero(leftToRightProjection.cols());
-    for (int col=0; col < leftToRightProjection.cols(); col++) {
+    for (int col = 0; col < leftToRightProjection.cols(); col++) {
         errors(col) = sqrt(powf(leftToRightProjection(0, col) - matchesRight(0, col), 2) +
                            powf(leftToRightProjection(1, col) - matchesRight(1, col), 2));
     }
-    std::cout << errors.transpose() << std::endl;
-    return errors.sum() / (float) leftToRightProjection.cols();
+//    std::cout << errors.transpose() << std::endl;
+//    return errors.sum() / (float) leftToRightProjection.cols();
+    return errors;
 }
 
 
@@ -66,57 +71,171 @@ void showExtrinsicsReconstruction(const std::string &filename, const Matrix4f &p
     outputMesh.writeMesh(filename);
 }
 
+std::vector<int> getRandomIndices(int maxIdx, int length, std::vector<int> init = {}, std::vector<int> exclude = {}) {
 
-EightPointAlgorithm RANSAC(const MatrixXf& kpLeftMat, const MatrixXf& kpRightMat, const Matrix3f& cameraLeft, const Matrix3f& cameraRight) {
+    std::vector<int> initExcluded;
+    if (!init.empty()) {
+        std::sort(init.begin(), init.end());
+        std::sort(exclude.begin(), exclude.end());
+        // remove excluded values from init
+        std::set_difference(init.begin(), init.end(), exclude.begin(), exclude.end(),
+                            std::inserter(initExcluded, initExcluded.begin()));
+        // add all unique values in init to excluded
+        exclude.insert(exclude.end(), initExcluded.begin(), initExcluded.end());
+    }
+
+    std::vector<int> randomIndices(maxIdx), diff;
+
+    // fill with random indices
+    std::iota(randomIndices.begin(), randomIndices.end(), 0);
+
+    // filter out excluded indices
+    std::sort(exclude.begin(), exclude.end());
+    std::set_difference(randomIndices.begin(), randomIndices.end(), exclude.begin(), exclude.end(),
+                        std::inserter(diff, diff.begin()));
+
+    // shuffle result
+    std::shuffle(diff.begin(), diff.end(), std::mt19937{std::random_device{}()});
+
+    if (!init.empty()) {
+        // insert initial values to front of diff
+        diff.insert(diff.begin(), initExcluded.begin(), initExcluded.end());
+    }
+    diff.resize(length);
+    return diff;
+}
+
+EightPointAlgorithm
+RANSAC(const MatrixXf &kpLeftMat, const MatrixXf &kpRightMat, const Matrix3f &cameraLeft, const Matrix3f &cameraRight) {
     // hyperparameters
-    int maxSamples = 100;
+    int maxIter = 100;
     int numPoints = 12;
+    int numPointsShuffle = 1;
     float errorThreshold = 3.;
 
-    MatrixXf sampledKpLeft, sampledKpRight;
-    sampledKpLeft = MatrixXf::Zero(3,numPoints);
-    sampledKpRight = MatrixXf::Zero(3, numPoints);
+    int numMatches = (int) kpLeftMat.cols();
 
-    for (int i=0; i < maxSamples; i++){
-        // create set of numPoints random indices
-        std::vector<int> randomIndices;
-        while (randomIndices.size() < numPoints) {
-            int index = rand() % kpLeftMat.cols();
-            if(std::find(randomIndices.begin(), randomIndices.end(), index) == randomIndices.end()) {
-                randomIndices.emplace_back(index);
-            }
+    MatrixXf sampledKpLeft, sampledKpRight;
+    // sampledKpLeft = MatrixXf::Zero(3, numPoints);
+    // sampledKpRight = MatrixXf::Zero(3, numPoints);
+
+    std::vector<int> randomIndices, bestIndices;
+
+    // get initial set
+    bool initialSuccess = false;
+    float avgError = 9999;
+    while (avgError > errorThreshold * 3) {
+        // estimate extrinsics
+        randomIndices = getRandomIndices(numMatches, numPoints);
+
+        sampledKpLeft = kpLeftMat(all, randomIndices);
+        sampledKpRight = kpRightMat(all, randomIndices);
+
+        EightPointAlgorithm ep(sampledKpLeft, sampledKpRight, cameraLeft, cameraRight);
+        try {
+            ep.run();
+        } catch (std::runtime_error &e) {
+            // invalid depth computed, try next set
+            // std::cout << e.what() << std::endl;
+            continue;
         }
-        // create subset of matches based on random indices
-        for (int j=0; j < randomIndices.size(); j++) {
-            sampledKpLeft.block(0, j, 3, 1) = kpLeftMat.block(0, randomIndices[j], 3, 1);
-            sampledKpRight.block(0, j, 3, 1) = kpRightMat.block(0, randomIndices[j], 3, 1);
-        }
+        Matrix3Xf rightPoints3D = ep.getPointsRightReconstructed();
+        MatrixXf leftToRightProjection = MatrixXf::Zero(3, rightPoints3D.cols());
+        leftToRightProjection = (cameraRight * rightPoints3D).cwiseQuotient(rightPoints3D.row(2).replicate(3, 1));
+
+        // compute pixel error per match
+        avgError = calculateEuclideanPixelError(leftToRightProjection, ep.getMatchesRight()).sum() / (float) numPoints;
+    }
+
+    std::vector<int> currentExclude, alwaysExclude, latestAddedPoints;
+    float bestError = avgError;
+
+    // do optimization
+    for (int i = 0; (i < maxIter) && (numMatches - alwaysExclude.size() > numPoints); i++) {
+        std::cout << "Iteration: " << i << std::endl;
+        std::cout << "Number of excluded points: " << alwaysExclude.size() << std::endl;
+        std::sort(randomIndices.begin(), randomIndices.end());   // for easier debugging
+
+        sampledKpLeft = kpLeftMat(all, randomIndices);
+        sampledKpRight = kpRightMat(all, randomIndices);
+
+        std::cout << "Random indices: " << std::endl;
+        for (auto idx : randomIndices)
+            std::cout << idx << "   ";
 
         // estimate extrinsics
+        EightPointAlgorithm ep(sampledKpLeft, sampledKpRight, cameraLeft, cameraRight);
         try {
-            EightPointAlgorithm ep(sampledKpLeft, sampledKpRight, cameraLeft, cameraRight);
-
-            // compute projection of left image keypoints to the right one
-            Matrix3Xf rightPoints3D = ep.getPointsRightReconstructed();
-            MatrixXf leftToRightProjection = MatrixXf::Zero(3, rightPoints3D.cols());
-            leftToRightProjection = (cameraRight * rightPoints3D).cwiseQuotient(rightPoints3D.row(2).replicate(3, 1));
-
-            std::cout << "Found a solution!" << std::endl;
-
-            // compute pixel error
-            float error = calculateEuclideanAveragePixelError(leftToRightProjection, ep.getMatchesRight());
-            std::cout << error << std::endl;
-            if (error < errorThreshold) {
-                // break random sampling
-                return ep;
-            }
-        } catch (std::runtime_error& e) {
+            ep.run();
+        } catch (std::runtime_error &e) {
             // invalid depth computed, try next set
             std::cout << e.what() << std::endl;
+
+            // always exclude points that made reconstruction fail (latest added points)
+            alwaysExclude.insert(alwaysExclude.end(), latestAddedPoints.begin(), latestAddedPoints.end());
+            randomIndices = getRandomIndices(numMatches, numPoints, randomIndices, alwaysExclude);
+
+            latestAddedPoints.clear();
+            latestAddedPoints.insert(latestAddedPoints.begin(), randomIndices.end() - numPointsShuffle,
+                                     randomIndices.end());
+
+            continue;
         }
-    }
+
+        // compute projection of left image keypoints to the right one
+        Matrix3Xf rightPoints3D = ep.getPointsRightReconstructed();
+        MatrixXf leftToRightProjection = MatrixXf::Zero(3, rightPoints3D.cols());
+        leftToRightProjection = (cameraRight * rightPoints3D).cwiseQuotient(rightPoints3D.row(2).replicate(3, 1));
+
+        // compute pixel error per match
+        VectorXf errors = calculateEuclideanPixelError(leftToRightProjection, ep.getMatchesRight());
+
+        std::cout << "Errors : " << errors.transpose() << std::endl;
+
+        float currentError = errors.sum() / (float) numPoints;
+
+        if ((errors.array() < errorThreshold).all()) {
+            // break random sampling
+            return ep;
+        } else {
+            if (currentError > bestError) {
+                std::cout << "No improvement, current error: " << currentError << std::endl;
+
+                // exclude latest points if error increased and sample new one
+                alwaysExclude.insert(alwaysExclude.end(), latestAddedPoints.begin(), latestAddedPoints.end());
+                randomIndices = getRandomIndices(numMatches, numPoints, randomIndices, alwaysExclude);
+
+            } else {
+                std::cout << "Improvement made, current error: " << currentError << std::endl;
+
+                // save results
+                bestError = currentError;
+                bestIndices = randomIndices;
+
+                // remove worst numPointsShuffle points and replace with random other points
+                std::vector<int> sortedIdx(randomIndices.size());
+                std::iota(sortedIdx.begin(), sortedIdx.end(), 0);
+                std::stable_sort(sortedIdx.begin(), sortedIdx.end(),
+                                 [&errors](int i1, int i2) { return errors(i1) > errors(i2); });
+
+                currentExclude.clear();
+                for (int k = 0; k < numPointsShuffle; k++) {
+                    currentExclude.emplace_back(randomIndices[sortedIdx[k]]);
+                }
+                currentExclude.insert(currentExclude.end(), alwaysExclude.begin(), alwaysExclude.end());
+
+                randomIndices = getRandomIndices(numMatches, numPoints, randomIndices, currentExclude);
+            }
+
+            latestAddedPoints.clear();
+            latestAddedPoints.insert(latestAddedPoints.begin(), randomIndices.end() - numPointsShuffle,
+                                     randomIndices.end());
+
+
+        }
+    };
     // no success
-    throw std::runtime_error("None of the estimated extrinsics was accurate enough!");
+    return EightPointAlgorithm(kpLeftMat(all, bestIndices), kpRightMat(all, bestIndices), cameraLeft, cameraRight);
 }
 
 
@@ -239,23 +358,7 @@ int main(int argc, char **argv) {
     EightPointAlgorithm dirtyFix(kpLeftMat, kpRightMat, cameraLeft, cameraRight);
 
     EightPointAlgorithm ep = RANSAC(dirtyFix.getMatchesLeft(), dirtyFix.getMatchesRight(), cameraLeft, cameraRight);
-    /*
-    std::cout << "Keypoints left (in Pixel coordinates): " << std::endl;
-    std::cout << ep.getMatchesLeft() << std::endl;
-    std::cout << "Points left (after applying inverse intrinsics): " << std::endl;
-    std::cout << cameraLeft.inverse() * ep.getMatchesLeft() << std::endl;
-
-    Matrix3f essentialMatrix = ep.getEssentialMatrix();
-    std::cout << "Essential Matrix: " << std::endl << essentialMatrix << std::endl;
-
-    Matrix4f pose = ep.getPose();
-    std::cout << "Pose: " << std::endl;
-    std::cout << pose << std::endl;
-
-    std::cout << "Reconstructed 3D points left" << std::endl;
-    std::cout << ep.getPointsLeftReconstructed() << std::endl;
-    showExtrinsicsReconstruction("8pt_reconstruction.off", pose, ep.getPointsLeftReconstructed(), ep.getPointsRightReconstructed());
-    */
+    ep.run();
 
     // TEST
     Matrix3Xf rightPoints3D = ep.getPointsRightReconstructed();
@@ -265,12 +368,26 @@ int main(int argc, char **argv) {
     std::cout << "compare matches in pixel coordinates:" << std::endl;
     std::cout << ep.getMatchesRight() << std::endl;
     std::cout << leftToRightProjection << std::endl;
+
+    // ---------------------------------------------------------
+    // Bundle Adjustment
+    // ---------------------------------------------------------
+
+    std::cout << "BUNDLE ADJUSTMENT" << std::endl;
+    Matrix4f pose = ep.getPose();
+    auto optimizer = BundleAdjustmentOptimizer(ep.getMatchesLeft(), ep.getMatchesRight(), cameraLeft, cameraRight, pose(seqN(0,3), seqN(0,3)), pose(seqN(0,3), 3), ep.getPointsLeftReconstructed());
+    pose = optimizer.estimatePose();
+    std::cout << "Final pose estimation: " << std::endl;
+    std::cout << pose << std::endl;
+
     // testVisualizationExtrinsics();
     // testCaseExtrinsics();
 
     for (int i = 0; i < rightPoints3D.cols(); i++) {
-        cv::circle(imageRight, cv::Point(leftToRightProjection(0,i), leftToRightProjection(1,i)), 5.0, cv::Scalar(255, 0, 0), 4);
-        cv::circle(imageRight, cv::Point(ep.getMatchesRight()(0,i), ep.getMatchesRight()(1,i)), 5.0, cv::Scalar(0, 255, 0), 4);
+        cv::circle(imageRight, cv::Point(leftToRightProjection(0, i), leftToRightProjection(1, i)), 5.0,
+                   cv::Scalar(255, 0, 0), 4);
+        cv::circle(imageRight, cv::Point(ep.getMatchesRight()(0, i), ep.getMatchesRight()(1, i)), 5.0,
+                   cv::Scalar(0, 255, 0), 4);
         //cv::circle(imageRight, cv::Point(ep.getMatchesLeft()(0,i), ep.getMatchesLeft()(1,i)), 5.0, cv::Scalar(0, 255, 255), 4);
     }
 
