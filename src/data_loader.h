@@ -5,6 +5,13 @@
 #ifndef STEREO_RECONSTRUCTION_DATALOADER_H
 #define STEREO_RECONSTRUCTION_DATALOADER_H
 
+#include <opencv4/opencv2/opencv.hpp>
+#include <filesystem>
+#include <fstream>
+#include "Eigen.h"
+#include "data.h"
+#include "directory.h"
+
 
 class DataLoader {
 /**
@@ -13,10 +20,19 @@ class DataLoader {
 public:
     DataLoader();
 
+    Data loadTrainingScenario(int scenarioIndex);
+
+    Data loadTestScenario(int scenarioIndex);
+
+    std::vector<Data> loadTrainingDataset();
+
+    std::vector<Data> loadTestDataset();
+
 private:
-    std::string relativeScenarioPath;
+    std::vector<std::string> trainingScenarioPaths;
+    std::vector<std::string> testScenarioPaths;
 
-
+    static void readCameraMatrices(std::string &scenarioPath, Matrix3f &cameraLeft, Matrix3f &cameraRight);
 };
 
 

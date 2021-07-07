@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.6)
 
 set( CMAKE_CONFIGURATION_TYPES Debug Release CACHE TYPE INTERNAL FORCE )
 project( stereo_reconstruction )
-set( CMAKE_CXX_STANDARD 14 )
+set( CMAKE_CXX_STANDARD 17 )
 
 #############################################################################################
 # Package Requirements
@@ -21,10 +21,12 @@ set(HEADERS
     directory.h
     eight_point.h
     SimpleMesh.h
-    BundleAdjustment.h)
+    BundleAdjustment.h
+    data_loader.h
+    data.h)
 
 set(SOURCES
-    directory.cpp eight_point.cpp)
+    directory.cpp eight_point.cpp data_loader.cpp data.cpp)
 
 #############################################################################################
 # Executables
