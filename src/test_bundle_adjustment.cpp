@@ -19,7 +19,7 @@ float averageReconstructionError(const Matrix3Xf& matchesLeft, const Matrix3Xf& 
     projectedPointsLeft = (intrinsicsLeft * reconstructedPointsLeft).cwiseQuotient(reconstructedPointsLeft.row(2).replicate(3,1));
 
     VectorXf errorsLeft;
-    errorsLeft = (projectedPointsLeft - matchesLeft).colwise().norm();
+    errorsLeft = (projectedPointsLeft - matchesLeft).colwise().norm() / (float) nPoints;
     std::cout << "Error left: " << errorsLeft.sum() << std::endl;
 
     // projection error right picture
@@ -27,7 +27,7 @@ float averageReconstructionError(const Matrix3Xf& matchesLeft, const Matrix3Xf& 
     translatedPoints = rotation * reconstructedPointsLeft + translation.replicate(1, nPoints);
     projectedPointsRight = (intrinsicsRight * translatedPoints).cwiseQuotient(translatedPoints.row(2).replicate(3,1));
     VectorXf errorsRight = (projectedPointsRight - matchesRight).colwise().norm();
-    std::cout << "Errors right: " << errorsRight.sum() << std::endl;
+    std::cout << "Errors right: " << errorsRight.sum() / (float) nPoints << std::endl;
 
     return (errorsLeft.sum() + errorsRight.sum()) / (float) nPoints;
 }
@@ -43,14 +43,14 @@ void testCase01() {
     Matrix3f intrinsics = Matrix3f::Identity();
     Matrix3Xf matchesLeft{3, 9}, matchesRight{3, 9};        // pixel coordinates
     Matrix3Xf pointsLeftNorm{3,9}, pointsRightNorm{3,9};    // inverse kinematics applied
-    Matrix3Xf pointsLeft3D{3,9}, pointsRight3D{3,9}, noisyPointsLeft3D{3,9};        // 3D points relative to coordinate frame
-    VectorXf depthVector{9}, noiseVector{9}, noisyDepthVector{9};
+    Matrix3Xf pointsLeft3D{3,9}, pointsRight3D{3,9}, noisyPointsLeft3D{3,9}, noiseMatrix{3, 9}, optimized3DPointsLeft{3,9};        // 3D points relative to coordinate frame
+    VectorXf depthVector{9};
     Matrix3f targetRotation, initRotation;
     Vector3f targetTranslation, initTranslation;
 
-    targetTranslation << 0, 0, 5;
+    targetTranslation << 0, 0, 10;
     initTranslation << 0, 0, 0;
-    targetRotation = AngleAxisf(30*M_PI/180, Vector3f(0, 0, 1).normalized());
+    targetRotation = AngleAxisf(50*M_PI/180, Vector3f(0, 0, 1).normalized());
     initRotation = AngleAxisf(0*M_PI/180, Vector3f(0, 0, 1).normalized());
 
     matchesLeft << 0, 0, 0, 250, 250, 250, 500, 500, 500,
@@ -58,13 +58,14 @@ void testCase01() {
             1, 1, 1, 1, 1, 1, 1, 1, 1;
     depthVector << 10, 10, 10, 20, 20, 20, 30, 30, 30;
 
-    noiseVector.setRandom();
-    noisyDepthVector = depthVector + noiseVector * 5;
+    noiseMatrix.setRandom();
+    noiseMatrix.col(0) = noiseMatrix.col(0) * 50;
+    noiseMatrix.col(1) = noiseMatrix.col(1) * 50;
+    noiseMatrix.col(2) = noiseMatrix.col(2) * 20;
 
     pointsLeftNorm = intrinsics.inverse() * matchesLeft;
     pointsLeft3D = pointsLeftNorm.cwiseProduct(depthVector.transpose().replicate(3, 1));
-    noisyPointsLeft3D = pointsLeftNorm.cwiseProduct(noisyDepthVector.transpose().replicate(3, 1));
-
+    noisyPointsLeft3D = pointsLeft3D + noiseMatrix;
 
     pointsRight3D = targetRotation * pointsLeft3D + targetTranslation.replicate(1, pointsRight3D.cols());
     pointsRightNorm = (intrinsics * pointsRight3D).cwiseQuotient(pointsRight3D.row(2).replicate(3, 1));
@@ -82,7 +83,12 @@ void testCase01() {
     pose = optimizer.estimatePose();
     std::cout << "Final estimated pose: " << std::endl << pose << std::endl;
     std::cout << "Reference rotation: " << std::endl << targetRotation <<  std::endl;
-    float finalCost = averageReconstructionError(matchesLeft, matchesRight, intrinsics, intrinsics, pose(seqN(0,3), seqN(0,3)), pose(seqN(0,3), 3), pointsLeft3D);
+
+    optimized3DPointsLeft = optimizer.getOptimized3DPoints();
+    std::cout << "Final estimated normalized points " << std::endl << optimized3DPointsLeft.cwiseQuotient(optimized3DPointsLeft.row(2).replicate(3, 1)) << std::endl;
+    std::cout << "Reference normalized points:" << std::endl << pointsLeftNorm << std::endl;
+
+    float finalCost = averageReconstructionError(matchesLeft, matchesRight, intrinsics, intrinsics, pose(seqN(0,3), seqN(0,3)), pose(seqN(0,3), 3), optimized3DPointsLeft);
     std::cout << "Final bundle adjustment costs: " << finalCost << std::endl;
 }
 
@@ -90,3 +96,8 @@ int main(int argc, char **argv) {
     testCase01();
     return 0;
 }
+
+/**
+* TODO: How to test that optimization works for 3D points as well?
+ * (> e.g. add noise not only to depth vector(has no influence) but instead to all x,y,z?)
+*/

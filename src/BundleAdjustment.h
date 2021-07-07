@@ -178,7 +178,7 @@ private:
 };
 
 
-
+#if 0
 class SimpleConstraint {
 public:
     SimpleConstraint(const Vector3f &keypoint, const Matrix3f &intrinsics, const Vector3f &point3D,
@@ -229,6 +229,8 @@ private:
     const bool m_applyTransformation;
 };
 
+#endif
+
 class BundleAdjustmentOptimizer {
 public:
     BundleAdjustmentOptimizer(const Matrix3Xf &matchesLeft,
@@ -248,6 +250,11 @@ public:
         if (initLeftPoints3D.cols() != N_POINTS){
             throw std::runtime_error("BundleAdjustmentOptimizer: Number of points does not match.");
         }
+        m_optimizedLeftPoints3D = MatrixXf::Zero(3, N_POINTS);
+    };
+
+    Matrix3Xf getOptimized3DPoints(){
+        return m_optimizedLeftPoints3D;
     };
 
     Matrix4f estimatePose() {
@@ -264,7 +271,17 @@ public:
         ceres::Solver::Summary summary;
         ceres::Solve(options, &problem, &summary);
         std::cout << summary.BriefReport() << std::endl;
-        return PoseIncrement<double>::convertToMatrix(poseIncrement);
+
+        // Save and return results
+        m_optimizedPose = PoseIncrement<double>::convertToMatrix(poseIncrement);
+
+        for(int i = 0; i < N_POINTS; i++){
+            m_optimizedLeftPoints3D(0, i) = vars[6 + 3*i];
+            m_optimizedLeftPoints3D(1, i) = vars[6 + 3*i +1];
+            m_optimizedLeftPoints3D(2, i) = vars[6 + 3*i +2];
+        }
+
+        return m_optimizedPose;
     }
 
 private:
@@ -316,6 +333,8 @@ private:
     Vector3f m_initTranslation;
     Matrix3Xf m_initLeftPoints3D;
 
+    Matrix4f m_optimizedPose;
+    Matrix3Xf m_optimizedLeftPoints3D;
 };
 
 #endif //STEREO_RECONSTRUCTION_BUNDLEADJUSTMENT_H
