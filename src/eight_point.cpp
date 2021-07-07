@@ -190,8 +190,8 @@ const Matrix3f &EightPointAlgorithm::getEssentialMatrix() const {
 }
 
 Matrix3f EightPointAlgorithm::getFundamentalMatrix() const {
-    // TODO: recompute: What about the right camera matrix? Compare to opencv!
-    return cameraLeft.transpose().inverse() * essentialMatrix * cameraLeft.inverse();
+    Matrix3f F = cameraRight.transpose().inverse() * essentialMatrix * cameraLeft.inverse();
+    return F / F.norm();
 }
 
 const Matrix3Xf &EightPointAlgorithm::getPointsLeftReconstructed() const {
