@@ -13,10 +13,10 @@
 #include <algorithm>
 
 #include "Eigen.h"
-#include "directory.h"
 #include "eight_point.h"
 #include "SimpleMesh.h"
 #include "BundleAdjustment.h"
+#include "data_loader.h"
 
 
 void featureMatching(const cv::Mat &featuresLeft, const cv::Mat &featuresRight, std::vector<cv::DMatch> &outputMatches,
@@ -37,7 +37,7 @@ void featureMatching(const cv::Mat &featuresLeft, const cv::Mat &featuresRight, 
 void SIFTKeypointDetection(const cv::Mat &image, std::vector<cv::KeyPoint> &outputKeypoints, cv::Mat &outputDescriptor,
                            const float edgeThreshold = 10, const float contrastThreshold = 0.04) {
     // detect outputKeypoints using SIFT
-    cv::Ptr<cv::SIFT> detector = cv::SIFT::create(100, 3, contrastThreshold, edgeThreshold);
+    cv::Ptr<cv::SIFT> detector = cv::SIFT::create(200, 3, contrastThreshold, edgeThreshold);
     detector->detectAndCompute(image, cv::noArray(), outputKeypoints, outputDescriptor);
 }
 
@@ -48,8 +48,6 @@ VectorXf calculateEuclideanPixelError(const MatrixXf &leftToRightProjection, con
         errors(col) = sqrt(powf(leftToRightProjection(0, col) - matchesRight(0, col), 2) +
                            powf(leftToRightProjection(1, col) - matchesRight(1, col), 2));
     }
-//    std::cout << errors.transpose() << std::endl;
-//    return errors.sum() / (float) leftToRightProjection.cols();
     return errors;
 }
 
@@ -116,13 +114,10 @@ RANSAC(const MatrixXf &kpLeftMat, const MatrixXf &kpRightMat, const Matrix3f &ca
     int numMatches = (int) kpLeftMat.cols();
 
     MatrixXf sampledKpLeft, sampledKpRight;
-    // sampledKpLeft = MatrixXf::Zero(3, numPoints);
-    // sampledKpRight = MatrixXf::Zero(3, numPoints);
 
     std::vector<int> randomIndices, bestIndices;
 
     // get initial set
-    bool initialSuccess = false;
     float avgError = 9999;
     while (avgError > errorThreshold * 3) {
         // estimate extrinsics
@@ -178,7 +173,6 @@ RANSAC(const MatrixXf &kpLeftMat, const MatrixXf &kpRightMat, const Matrix3f &ca
             latestAddedPoints.clear();
             latestAddedPoints.insert(latestAddedPoints.begin(), randomIndices.end() - numPointsShuffle,
                                      randomIndices.end());
-
             continue;
         }
 
@@ -230,8 +224,6 @@ RANSAC(const MatrixXf &kpLeftMat, const MatrixXf &kpRightMat, const Matrix3f &ca
             latestAddedPoints.clear();
             latestAddedPoints.insert(latestAddedPoints.begin(), randomIndices.end() - numPointsShuffle,
                                      randomIndices.end());
-
-
         }
     };
     // no success
@@ -291,28 +283,18 @@ void testCaseExtrinsics() {
 }
 
 
-int main(int argc, char **argv) {
-    std::string image_path;
-    if (argc == 1) {
-        image_path = getCurrentDirectory() + "/../../data/MiddEval3/trainingH/Pipes";
-    } else {
-        image_path = std::string(argv[1]);
-    }
+int main() {
+    DataLoader dataLoader = DataLoader();
 
-    // load stereo images
-    cv::Mat imageLeft = cv::imread(image_path + "/im0.png", cv::IMREAD_COLOR);
-    cv::Mat imageRight = cv::imread(image_path + "/im1.png", cv::IMREAD_COLOR);
-    if (!imageLeft.data || !imageRight.data) {
-        std::cout << "No image data. Check file path!" << std::endl;
-        return -1;
-    }
+    // select scenarios by index (alphabetic position starting with 0)
+    Data data = dataLoader.loadTrainingScenario(11);
 
     // find keypoints
     std::vector<cv::KeyPoint> keypointsLeft, keypointsRight;
     cv::Mat featuresLeft, featuresRight;
 
-    SIFTKeypointDetection(imageLeft, keypointsLeft, featuresLeft);
-    SIFTKeypointDetection(imageRight, keypointsRight, featuresRight);
+    SIFTKeypointDetection(data.getImageLeft(), keypointsLeft, featuresLeft);
+    SIFTKeypointDetection(data.getImageRight(), keypointsRight, featuresRight);
 
     // find correspondences
     std::vector<cv::DMatch> matches;
@@ -320,50 +302,31 @@ int main(int argc, char **argv) {
 
     // visualization of feature extraction
     cv::Mat outputImageLeft, outputImageRight;
-    cv::drawKeypoints(imageLeft, keypointsLeft, outputImageLeft);
-    cv::drawKeypoints(imageRight, keypointsRight, outputImageRight);
+    cv::drawKeypoints(data.getImageLeft(), keypointsLeft, outputImageLeft);
+    cv::drawKeypoints(data.getImageRight(), keypointsRight, outputImageRight);
     cv::imwrite("../../results/imageLeft.png", outputImageLeft);
     cv::imwrite("../../results/imageRight.png", outputImageRight);
 
     // visualization of feature matching
     cv::Mat img_matches;
-    cv::drawMatches(imageLeft, keypointsLeft, imageRight, keypointsRight, matches, img_matches, cv::Scalar::all(-1),
+    cv::drawMatches(data.getImageLeft(), keypointsLeft, data.getImageRight(), keypointsRight, matches, img_matches, cv::Scalar::all(-1),
                     cv::Scalar::all(-1), std::vector<char>(), cv::DrawMatchesFlags::NOT_DRAW_SINGLE_POINTS);
     cv::imwrite("../../results/matching_flann.png", img_matches);
 
-
     // estimate pose using the eight point algorithm
-    // TODO read calib.txt to get camera matrices -> SDK?
-    Matrix3f cameraLeft, cameraRight;
-
-    // ArtL
-    //cameraLeft << 1870, 0, 297, 0, 1870, 277, 0, 0, 1;
-    //cameraRight << 1870, 0, 397, 0, 1870, 277, 0, 0, 1;
-
-    // Motorcycle
-    //cameraLeft << 1998.842, 0, 588.364, 0, 1998.842, 505.864, 0, 0, 1;
-    //cameraRight << 1998.842, 0, 653.919, 0, 1998.842, 505.864, 0, 0, 1;
-
-    // PianoL
-    //cameraLeft << 1426.379, 0, 712.043, 0, 1426.379, 476.526, 0, 0, 1;
-    //cameraRight << 1426.379, 0, 774.722, 0, 1426.379, 476.526, 0, 0, 1;
-
-    // Pipes
-    cameraLeft << 1979.773, 0, 785.885, 0, 1979.773, 486.442, 0, 0, 1;
-    cameraRight << 1979.773, 0, 824.548, 0, 1979.773, 486.442, 0, 0, 1;
-
     Matrix3Xf kpLeftMat, kpRightMat;
     transformMatchedKeypointsToEigen(keypointsLeft, keypointsRight, matches, kpLeftMat, kpRightMat);
 
-    EightPointAlgorithm dirtyFix(kpLeftMat, kpRightMat, cameraLeft, cameraRight);
+    // TODO: Embed RANSAC to Eight-point class instead of using dirty solution
+    EightPointAlgorithm dirtyFix(kpLeftMat, kpRightMat, data.getCameraMatrixLeft(), data.getCameraMatrixRight());
 
-    EightPointAlgorithm ep = RANSAC(dirtyFix.getMatchesLeft(), dirtyFix.getMatchesRight(), cameraLeft, cameraRight);
+    EightPointAlgorithm ep = RANSAC(dirtyFix.getMatchesLeft(), dirtyFix.getMatchesRight(), data.getCameraMatrixLeft(), data.getCameraMatrixRight());
     ep.run();
 
     // TEST
     Matrix3Xf rightPoints3D = ep.getPointsRightReconstructed();
     MatrixXf leftToRightProjection = MatrixXf::Zero(3, rightPoints3D.cols());
-    leftToRightProjection = (cameraRight * rightPoints3D).cwiseQuotient(rightPoints3D.row(2).replicate(3, 1));
+    leftToRightProjection = (data.getCameraMatrixRight() * rightPoints3D).cwiseQuotient(rightPoints3D.row(2).replicate(3, 1));
 
     std::cout << "compare matches in pixel coordinates:" << std::endl;
     std::cout << ep.getMatchesRight() << std::endl;
@@ -375,7 +338,7 @@ int main(int argc, char **argv) {
 
     std::cout << "BUNDLE ADJUSTMENT" << std::endl;
     Matrix4f pose = ep.getPose();
-    auto optimizer = BundleAdjustmentOptimizer(ep.getMatchesLeft(), ep.getMatchesRight(), cameraLeft, cameraRight, pose(seqN(0,3), seqN(0,3)), pose(seqN(0,3), 3), ep.getPointsLeftReconstructed());
+    auto optimizer = BundleAdjustmentOptimizer(ep.getMatchesLeft(), ep.getMatchesRight(), data.getCameraMatrixLeft(), data.getCameraMatrixRight(), pose(seqN(0,3), seqN(0,3)), pose(seqN(0,3), 3), ep.getPointsLeftReconstructed());
     pose = optimizer.estimatePose();
     std::cout << "Final pose estimation: " << std::endl;
     std::cout << pose << std::endl;
@@ -384,41 +347,27 @@ int main(int argc, char **argv) {
     // testCaseExtrinsics();
 
     for (int i = 0; i < rightPoints3D.cols(); i++) {
-        cv::circle(imageRight, cv::Point(leftToRightProjection(0, i), leftToRightProjection(1, i)), 5.0,
+        cv::circle(data.getImageRight(), cv::Point(leftToRightProjection(0, i), leftToRightProjection(1, i)), 5.0,
                    cv::Scalar(255, 0, 0), 4);
-        cv::circle(imageRight, cv::Point(ep.getMatchesRight()(0, i), ep.getMatchesRight()(1, i)), 5.0,
+        cv::circle(data.getImageRight(), cv::Point(ep.getMatchesRight()(0, i), ep.getMatchesRight()(1, i)), 5.0,
                    cv::Scalar(0, 255, 0), 4);
-        //cv::circle(imageRight, cv::Point(ep.getMatchesLeft()(0,i), ep.getMatchesLeft()(1,i)), 5.0, cv::Scalar(0, 255, 255), 4);
+        //cv::circle(data.getImageRight(), cv::Point(ep.getMatchesLeft()(0,i), ep.getMatchesLeft()(1,i)), 5.0, cv::Scalar(0, 255, 255), 4);
     }
 
-    cv::imwrite("../../results/greatImage.png", imageRight);
+    cv::imwrite("../../results/greatImage.png", data.getImageRight());
 
     return 0;
 }
-
-
 
 
 /**
 * TODO: next week/future
  *
  * 1. RANSAC:
- *      - just sample 2 or 3 new indices -> kick out the worst performing and set black list
  *      - embed RANSAC as boolean parameter in class and set mask for indices (somewhere in set/update data)
  *
- * 2. Optimization: Redefinement of results of 8 pt algorithm (Eigen)
- *      - BundleAdjustment (Ceres)
+ * 2. SDK: Read and load Disparity maps
  *
- * 3. SDK: Reading Image Data
- *     int image_idx = 3;  // one index per scenario in trainingFiles
- *     class Dataloader(/relative/path/to/training/data )
- *     load(idx) > data struct
- *
- *     data struct{
- *     imageLeft,
- *     imageRight,
- *     intrinsics,
- *     xyz,
- *     }
+ * 3. Test if it works for all scenarios: Had runtime exception once (less than 8 input points!!!)
  *
 */
