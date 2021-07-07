@@ -11,7 +11,7 @@
 
 #include "Eigen.h"
 
-#define N_POINTS 9      //TODO: change to 12 later
+#define N_POINTS 12      //TODO: change to 12 later
 
 /**
  * NOTE: Taken from lecture, exercise 5
@@ -177,60 +177,6 @@ private:
     const bool m_applyTransformation;
 };
 
-
-#if 0
-class SimpleConstraint {
-public:
-    SimpleConstraint(const Vector3f &keypoint, const Matrix3f &intrinsics, const Vector3f &point3D,
-                     bool applyTransformation) :
-            m_keypoint{keypoint}, m_intrinsics{intrinsics}, m_point3D(point3D), m_applyTransformation{applyTransformation} {}
-
-    template <typename T>
-    bool operator()(const T *const vars, T *residuals) const {
-        // get pose from vars
-        PoseIncrement<T> poseIncrement = PoseIncrement<T>(const_cast<T *const>(vars));
-        // poseIncrement.print();
-
-        T transformedPoint3D[3];
-
-        if (m_applyTransformation) {
-            // transform 3d point using current pose
-            T point3D[3];
-            fillVector(m_point3D, &point3D[0]);
-            poseIncrement.apply(&point3D[0], &transformedPoint3D[0]);
-        } else {
-            // only apply projection 3D > 2D
-            fillVector(m_point3D, &transformedPoint3D[0]);
-        }
-
-        // use Eigen to backproject 3D point to 2D image plane
-        Vector<T, 3> projectedPoint{transformedPoint3D};
-        projectedPoint = (m_intrinsics.cast<T>() * projectedPoint) / projectedPoint[2];
-
-        // residual
-        residuals[0] = T(m_keypoint[0]) - projectedPoint[0];
-        residuals[1] = T(m_keypoint[1]) - projectedPoint[1];
-
-        return true;
-    }
-
-    static ceres::CostFunction *
-    create(const Vector3f &keypoint, const Matrix3f &intrinsics, const Vector3f &point3D, bool applyTransform) {
-        return new ceres::AutoDiffCostFunction<SimpleConstraint, 2, 6>(
-                new SimpleConstraint(keypoint, intrinsics, point3D, applyTransform)
-        );
-    }
-
-
-private:
-    const Vector3f m_keypoint;          /* in pixel coordinates */
-    const Matrix3f m_intrinsics;
-    const Vector3f m_point3D;
-    const bool m_applyTransformation;
-};
-
-#endif
-
 class BundleAdjustmentOptimizer {
 public:
     BundleAdjustmentOptimizer(const Matrix3Xf &matchesLeft,
@@ -282,6 +228,12 @@ public:
         }
 
         return m_optimizedPose;
+    }
+
+    Matrix3f getFundamentalMatrix() const{
+        Matrix3f essentialMatrix = vectorAsSkew(m_optimizedPose(seqN(0,3), 3)) * m_optimizedPose(seqN(0,3), seqN(0,3));
+        Matrix3f F = m_intrinsicsRight.transpose().inverse() * essentialMatrix * m_intrinsicsRight.inverse();
+        return F / F.norm();
     }
 
 private:

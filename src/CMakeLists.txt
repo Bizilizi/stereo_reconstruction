@@ -50,5 +50,5 @@ target_include_directories(keypoints PUBLIC ${Eigen3_INCLUDE_DIR})
 target_include_directories(test_bundle_adjustment PUBLIC ${Eigen3_INCLUDE_DIR})
 
 target_link_libraries(test_bundle_adjustment ceres)
-#target_link_libraries(dragon ceres)
+target_link_libraries(keypoints ceres)
 #target_link_libraries(surface ceres)

@@ -17,7 +17,6 @@ EightPointAlgorithm::EightPointAlgorithm(const Matrix3Xf &matchesL, const Matrix
     pointsLeftReconstructed = MatrixXf::Zero(3, numMatches);
     pointsRightReconstructed = MatrixXf::Zero(3, numMatches);
 
-    run();
 }
 
 void EightPointAlgorithm::run() {
@@ -191,7 +190,8 @@ const Matrix3f &EightPointAlgorithm::getEssentialMatrix() const {
 }
 
 Matrix3f EightPointAlgorithm::getFundamentalMatrix() const {
-    return cameraLeft.transpose().inverse() * essentialMatrix * cameraLeft.inverse();
+    Matrix3f F = cameraRight.transpose().inverse() * essentialMatrix * cameraLeft.inverse();
+    return F / F.norm();
 }
 
 const Matrix3Xf &EightPointAlgorithm::getPointsLeftReconstructed() const {
