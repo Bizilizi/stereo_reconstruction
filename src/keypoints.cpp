@@ -416,6 +416,6 @@ int main() {
  * 3. Test if it works for all scenarios: Had runtime exception once (less than 8 input points!!!)
  *
  * Test fundamental matrix
- * Reconstruction Pipeline
+ * Reconstruction Pipeline: Loading ground truth + triangulation
  *
 */

@@ -3,6 +3,7 @@
 //
 
 #include "data_loader.h"
+#include "imageLib.h"
 
 
 DataLoader::DataLoader() {
@@ -49,9 +50,14 @@ Data DataLoader::loadTrainingScenario(int scenarioIndex) {
     Matrix3f cameraLeft, cameraRight;
     readCameraMatrices(scenarioPath, cameraLeft, cameraRight);
 
+    // get disparity map
+    cv::Mat dispLeft, dispRight;
+
+    loadDisparityMatrices(scenarioPath, dispLeft, dispRight);
+
     // TODO: Add further stuff like disparity maps
 
-    Data scenario = Data(imageLeft, imageRight, cameraLeft, cameraRight);
+    Data scenario = Data(imageLeft, imageRight, cameraLeft, cameraRight, dispLeft, dispRight);
     return scenario;
 }
 
@@ -73,7 +79,24 @@ Data DataLoader::loadTestScenario(int scenarioIndex) {
     return scenario;
 }
 
-void DataLoader::readCameraMatrices(std::string &scenarioPath, Matrix3f &cameraLeft, Matrix3f &cameraRight) {
+void DataLoader::loadDisparityMatrices(const string &scenarioPath, cv::Mat& dispLeft, cv::Mat& dispRight) {
+    // read map using SDK
+    CFloatImage dispRawLeft, dispRawRight;
+    ReadImageVerb(dispRawLeft, (scenarioPath + "/disp0GT.pfm").c_str(), 0);
+    ReadImageVerb(dispRawRight, (scenarioPath + "/disp1GT.pfm").c_str(), 0);
+
+    // resize cv::Mat (output matrices)
+    dispLeft.create(dispRawLeft.Shape().height, dispRawLeft.Shape().width, CV_32FC1);
+    dispRight.create(dispRawLeft.Shape().height, dispRawLeft.Shape().width, CV_32FC1);
+
+    // copy data (float values, 4 byte)
+    size_t sz = dispLeft.rows * dispLeft.cols * sizeof(float);
+    memcpy(dispLeft.data, dispRawLeft.PixelAddress(0,0,0), sz);
+    memcpy(dispRight.data, dispRawLeft.PixelAddress(0,0,0), sz);
+
+}
+
+void DataLoader::readCameraMatrices(const std::string &scenarioPath, Matrix3f &cameraLeft, Matrix3f &cameraRight) {
     std::ifstream calibration(scenarioPath + "/calib.txt");
     // read first two lines and extract the camera matrices
     std::string line;

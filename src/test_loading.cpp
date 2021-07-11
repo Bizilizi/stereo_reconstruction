@@ -20,6 +20,7 @@ void displaySingleImage(const cv::Mat &image1){
 }
 
 int main(int argc, char** argv ) {
+
     DataLoader dataLoader = DataLoader();
     Data trainingData = dataLoader.loadTrainingScenario(11);
     Data testData = dataLoader.loadTestScenario(0);

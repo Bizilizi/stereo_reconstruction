@@ -13,6 +13,7 @@
 #include "directory.h"
 
 
+
 class DataLoader {
 /**
  * Loads data from the middlebury dataset
@@ -32,7 +33,8 @@ private:
     std::vector<std::string> trainingScenarioPaths;
     std::vector<std::string> testScenarioPaths;
 
-    static void readCameraMatrices(std::string &scenarioPath, Matrix3f &cameraLeft, Matrix3f &cameraRight);
+    static void readCameraMatrices(const std::string &scenarioPath, Matrix3f &cameraLeft, Matrix3f &cameraRight);
+    static void loadDisparityMatrices(const std::string &scenarioPath, cv::Mat &dispLeft, cv::Mat &dispRight);
 };
 
 
