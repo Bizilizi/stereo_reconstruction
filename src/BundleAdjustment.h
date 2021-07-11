@@ -11,7 +11,7 @@
 
 #include "Eigen.h"
 
-#define N_POINTS 12      //TODO: change to 12 later
+#define N_POINTS 12
 
 /**
  * NOTE: Taken from lecture, exercise 5
@@ -269,7 +269,7 @@ private:
         options.use_nonmonotonic_steps = false;
         options.linear_solver_type = ceres::DENSE_QR;
         options.minimizer_progress_to_stdout = 1;
-        options.max_num_iterations = 10;
+        options.max_num_iterations = 20;
         options.num_threads = 1;
     }
 

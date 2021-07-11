@@ -18,6 +18,8 @@
 #include "BundleAdjustment.h"
 #include "data_loader.h"
 
+#define N_KEYPOINTS_SIFT 250
+#define N_KEYPOINTS_8PT 12
 
 void featureMatching(const cv::Mat &featuresLeft, const cv::Mat &featuresRight, std::vector<cv::DMatch> &outputMatches,
                      float ratio_thresh = 0.7f) {
@@ -37,7 +39,7 @@ void featureMatching(const cv::Mat &featuresLeft, const cv::Mat &featuresRight, 
 void SIFTKeypointDetection(const cv::Mat &image, std::vector<cv::KeyPoint> &outputKeypoints, cv::Mat &outputDescriptor,
                            const float edgeThreshold = 10, const float contrastThreshold = 0.04) {
     // detect outputKeypoints using SIFT
-    cv::Ptr<cv::SIFT> detector = cv::SIFT::create(200, 3, contrastThreshold, edgeThreshold);
+    cv::Ptr<cv::SIFT> detector = cv::SIFT::create(N_KEYPOINTS_SIFT, 3, contrastThreshold, edgeThreshold);
     detector->detectAndCompute(image, cv::noArray(), outputKeypoints, outputDescriptor);
 }
 
@@ -107,7 +109,7 @@ EightPointAlgorithm
 RANSAC(const MatrixXf &kpLeftMat, const MatrixXf &kpRightMat, const Matrix3f &cameraLeft, const Matrix3f &cameraRight) {
     // hyperparameters
     int maxIter = 100;
-    int numPoints = 12;
+    int numPoints = N_KEYPOINTS_8PT;
     int numPointsShuffle = 1;
     float errorThreshold = 3.;
 
@@ -226,7 +228,6 @@ RANSAC(const MatrixXf &kpLeftMat, const MatrixXf &kpRightMat, const Matrix3f &ca
                                      randomIndices.end());
         }
     };
-    // no success
     return EightPointAlgorithm(kpLeftMat(all, bestIndices), kpRightMat(all, bestIndices), cameraLeft, cameraRight);
 }
 
@@ -287,7 +288,7 @@ int main() {
     DataLoader dataLoader = DataLoader();
 
     // select scenarios by index (alphabetic position starting with 0)
-    Data data = dataLoader.loadTrainingScenario(11);
+    Data data = dataLoader.loadTrainingScenario(1);
 
     // find keypoints
     std::vector<cv::KeyPoint> keypointsLeft, keypointsRight;
@@ -309,7 +310,8 @@ int main() {
 
     // visualization of feature matching
     cv::Mat img_matches;
-    cv::drawMatches(data.getImageLeft(), keypointsLeft, data.getImageRight(), keypointsRight, matches, img_matches, cv::Scalar::all(-1),
+    cv::drawMatches(data.getImageLeft(), keypointsLeft, data.getImageRight(), keypointsRight, matches, img_matches,
+                    cv::Scalar::all(-1),
                     cv::Scalar::all(-1), std::vector<char>(), cv::DrawMatchesFlags::NOT_DRAW_SINGLE_POINTS);
     cv::imwrite("../../results/matching_flann.png", img_matches);
 
@@ -320,13 +322,15 @@ int main() {
     // TODO: Embed RANSAC to Eight-point class instead of using dirty solution
     EightPointAlgorithm dirtyFix(kpLeftMat, kpRightMat, data.getCameraMatrixLeft(), data.getCameraMatrixRight());
 
-    EightPointAlgorithm ep = RANSAC(dirtyFix.getMatchesLeft(), dirtyFix.getMatchesRight(), data.getCameraMatrixLeft(), data.getCameraMatrixRight());
+    EightPointAlgorithm ep = RANSAC(dirtyFix.getMatchesLeft(), dirtyFix.getMatchesRight(), data.getCameraMatrixLeft(),
+                                    data.getCameraMatrixRight());
     ep.run();
 
     // TEST
     Matrix3Xf rightPoints3D = ep.getPointsRightReconstructed();
     MatrixXf leftToRightProjection = MatrixXf::Zero(3, rightPoints3D.cols());
-    leftToRightProjection = (data.getCameraMatrixRight() * rightPoints3D).cwiseQuotient(rightPoints3D.row(2).replicate(3, 1));
+    leftToRightProjection = (data.getCameraMatrixRight() * rightPoints3D).cwiseQuotient(
+            rightPoints3D.row(2).replicate(3, 1));
 
     std::cout << "compare matches in pixel coordinates:" << std::endl;
     std::cout << ep.getMatchesRight() << std::endl;
@@ -338,7 +342,9 @@ int main() {
 
     std::cout << "BUNDLE ADJUSTMENT" << std::endl;
     Matrix4f pose = ep.getPose();
-    auto optimizer = BundleAdjustmentOptimizer(ep.getMatchesLeft(), ep.getMatchesRight(), data.getCameraMatrixLeft(), data.getCameraMatrixRight(), pose(seqN(0,3), seqN(0,3)), pose(seqN(0,3), 3), ep.getPointsLeftReconstructed());
+    auto optimizer = BundleAdjustmentOptimizer(ep.getMatchesLeft(), ep.getMatchesRight(), data.getCameraMatrixLeft(),
+                                               data.getCameraMatrixRight(), pose(seqN(0, 3), seqN(0, 3)),
+                                               pose(seqN(0, 3), 3), ep.getPointsLeftReconstructed());
     pose = optimizer.estimatePose();
     std::cout << "Final pose estimation: " << std::endl;
     std::cout << pose << std::endl;
@@ -356,6 +362,45 @@ int main() {
 
     cv::imwrite("../../results/greatImage.png", data.getImageRight());
 
+    // ---------------------------------------------------------
+    // Test fundamental matrix with opencv results
+    // ---------------------------------------------------------
+
+    Matrix3f F_adirondack;
+    F_adirondack << 1.353630396977012e-08, 2.595224518574046e-05, -0.003664439029043263,
+            -2.375965046088001e-05, 6.518226848965876e-06, 0.6848607609793337,
+            0.002978229678431134, -0.6892694179932449, 1;
+    std::cout << "Norm 1: " << F_adirondack.norm() << std::endl;
+    F_adirondack = F_adirondack / F_adirondack.norm();
+
+    Matrix3f F_motorcycle;
+    F_motorcycle << 1.091980817956205e-09, -1.077326037996396e-06, -5.992489813392534e-05,
+            -1.076078736340656e-06, 5.56622420714599e-06, 0.6117147946026104,
+            0.0005622610321208721, -0.615586969390141, 1;
+    std::cout << "Norm 2: " << F_motorcycle.norm();
+    F_motorcycle = F_motorcycle / F_motorcycle.norm();
+
+    Matrix3f F_artl;
+    F_artl << 5.006730349381669e-09, -6.911283149129414e-05, 0.02474192270203782,
+            6.672591643596967e-05, -3.725089989820235e-06, 0.4516838929035329,
+            -0.02386824152172776, -0.4534031147114552, 0.9999999999999999;
+    F_artl = F_artl/ F_artl.norm();
+
+    Matrix3f F = F_motorcycle;
+
+
+    std::cout << std::endl <<  "COMPARISON after Bundle adjustment: " << std::endl;
+    std::cout << "Error " << (optimizer.getFundamentalMatrix() - F).norm() << std::endl;
+    std::cout << "Norm:" << (optimizer.getFundamentalMatrix().norm()) << std::endl;
+    std::cout << optimizer.getFundamentalMatrix() << std::endl << std::endl;
+    std::cout << F << std::endl;
+
+    std::cout << std::endl <<  "COMPARISON 8 pt " << std::endl;
+    std::cout << "Error " << (ep.getFundamentalMatrix() - F).norm() << std::endl;
+    std::cout << "Norm:" << (ep.getFundamentalMatrix().norm()) << std::endl;
+    std::cout << ep.getFundamentalMatrix() << std::endl << std::endl;
+    std::cout << F << std::endl;
+
     return 0;
 }
 
@@ -369,5 +414,8 @@ int main() {
  * 2. SDK: Read and load Disparity maps
  *
  * 3. Test if it works for all scenarios: Had runtime exception once (less than 8 input points!!!)
+ *
+ * Test fundamental matrix
+ * Reconstruction Pipeline
  *
 */
