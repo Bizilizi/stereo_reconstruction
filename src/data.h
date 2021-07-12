@@ -20,7 +20,9 @@ public:
          Matrix3f cameraLeft,
          Matrix3f cameraRight,
          cv::Mat disparityGTLeft,
-         cv::Mat disparityGTRight
+         cv::Mat disparityGTRight,
+         cv::Mat maskNonOccludedLeft,
+         cv::Mat maskNonOccludedRight
          );
 
     Data(cv::Mat imageLeft,
@@ -47,6 +49,10 @@ public:
 
     const cv::Mat &getDisparityRight() const;
 
+    const cv::Mat &getMaskNonOccludedLeft() const;
+
+    const cv::Mat &getMaskNonOccludedRight() const;
+
     // TODO: get disparity maps
 
 private:
@@ -56,6 +62,8 @@ private:
     Matrix3f cameraRight;
     cv::Mat disparityGTLeft;
     cv::Mat disparityGTRight;
+    cv::Mat maskNonOccludedLeft;
+    cv::Mat maskNonOccludedRight;
 };
 
 

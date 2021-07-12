@@ -52,12 +52,15 @@ Data DataLoader::loadTrainingScenario(int scenarioIndex) {
 
     // get disparity map
     cv::Mat dispLeft, dispRight;
-
     loadDisparityMatrices(scenarioPath, dispLeft, dispRight);
 
-    // TODO: Add further stuff like disparity maps
+    // get disparity masks
+    cv::Mat maskLeft = cv::imread(scenarioPath + "/mask0nocc.png", cv::IMREAD_UNCHANGED);
+    cv::Mat maskRight = cv::imread(scenarioPath + "/mask1nocc.png", cv::IMREAD_UNCHANGED);
 
-    Data scenario = Data(imageLeft, imageRight, cameraLeft, cameraRight, dispLeft, dispRight);
+    cv::imshow("hi", maskLeft);
+
+    Data scenario = Data(imageLeft, imageRight, cameraLeft, cameraRight, dispLeft, dispRight, maskLeft, maskRight);
     return scenario;
 }
 
@@ -93,7 +96,6 @@ void DataLoader::loadDisparityMatrices(const string &scenarioPath, cv::Mat& disp
     size_t sz = dispLeft.rows * dispLeft.cols * sizeof(float);
     memcpy(dispLeft.data, dispRawLeft.PixelAddress(0,0,0), sz);
     memcpy(dispRight.data, dispRawLeft.PixelAddress(0,0,0), sz);
-
 }
 
 void DataLoader::readCameraMatrices(const std::string &scenarioPath, Matrix3f &cameraLeft, Matrix3f &cameraRight) {
@@ -120,4 +122,5 @@ void DataLoader::readCameraMatrices(const std::string &scenarioPath, Matrix3f &c
     }
     calibration.close();
 }
+
 
