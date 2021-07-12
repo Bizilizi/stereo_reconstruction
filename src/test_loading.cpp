@@ -6,6 +6,8 @@
 #include <opencv4/opencv2/opencv.hpp>
 #include "data_loader.h"
 
+#include "reconstruction.h"
+
 
 void displayStereoImages(const cv::Mat &image1, const cv::Mat &image2){
     cv::Mat stackedImages;
@@ -40,6 +42,8 @@ int main(int argc, char** argv ) {
     // cvkit: display image
     cv::Mat rawDispImage = cv::imread(image_path + "/disp0GT.pfm", cv::IMREAD_UNCHANGED);
     */
+
+    test_reconstruction();
 
     return 0;
 }
