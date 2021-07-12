@@ -22,6 +22,7 @@ void displaySingleImage(const cv::Mat &image1){
 }
 
 int main(int argc, char** argv ) {
+
     DataLoader dataLoader = DataLoader();
     Data trainingData = dataLoader.loadTrainingScenario(11);
     Data testData = dataLoader.loadTestScenario(0);
@@ -43,7 +44,7 @@ int main(int argc, char** argv ) {
     cv::Mat rawDispImage = cv::imread(image_path + "/disp0GT.pfm", cv::IMREAD_UNCHANGED);
     */
 
-    test_reconstruction();
+    //test_reconstruction();
 
     return 0;
 }

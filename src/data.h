@@ -7,6 +7,7 @@
 
 #include "Eigen.h"
 #include <opencv4/opencv2/opencv.hpp>
+#include "imageLib.h"
 
 
 class Data {
@@ -17,7 +18,18 @@ public:
     Data(cv::Mat imageLeft,
          cv::Mat imageRight,
          Matrix3f cameraLeft,
-         Matrix3f cameraRight);
+         Matrix3f cameraRight,
+         cv::Mat disparityGTLeft,
+         cv::Mat disparityGTRight,
+         cv::Mat maskNonOccludedLeft,
+         cv::Mat maskNonOccludedRight
+         );
+
+    Data(cv::Mat imageLeft,
+         cv::Mat imageRight,
+         Matrix3f cameraLeft,
+         Matrix3f cameraRight
+    );
 
     // TODO: Add second data constructor including disparities
 
@@ -33,6 +45,14 @@ public:
 
     const Matrix3f &getCameraMatrixRight() const;
 
+    const cv::Mat &getDisparityLeft() const;
+
+    const cv::Mat &getDisparityRight() const;
+
+    const cv::Mat &getMaskNonOccludedLeft() const;
+
+    const cv::Mat &getMaskNonOccludedRight() const;
+
     // TODO: get disparity maps
 
 private:
@@ -40,6 +60,10 @@ private:
     cv::Mat imageRight;
     Matrix3f cameraLeft;
     Matrix3f cameraRight;
+    cv::Mat disparityGTLeft;
+    cv::Mat disparityGTRight;
+    cv::Mat maskNonOccludedLeft;
+    cv::Mat maskNonOccludedRight;
 };
 
 
