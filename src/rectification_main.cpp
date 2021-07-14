@@ -11,6 +11,8 @@
 #include "rectification/rectification.hpp"
 #include "stero_matching/LinearSearch.h"
 #include "stero_matching/BlockSearch.h"
+#include "data_loader.h"
+#include "evalDisp.h"
 
 enum detector_id {
   ORB,
@@ -162,9 +164,13 @@ int main(int argc, char **argv) {
 		image_path = std::string(argv[1]);
 	}
 
+    DataLoader dataLoader = DataLoader();
+    Data trainingData = dataLoader.loadTrainingScenario(13);
+    cv::Mat imageLeft = trainingData.getImageLeft();
+    cv::Mat imageRight = trainingData.getImageRight();
 	// load stereo images
-	cv::Mat imageLeft = cv::imread(image_path + "/im0.png", cv::IMREAD_COLOR);
-	cv::Mat imageRight = cv::imread(image_path + "/im1.png", cv::IMREAD_COLOR);
+	//cv::Mat imageLeft = cv::imread(image_path + "/im0.png", cv::IMREAD_COLOR);
+	//cv::Mat imageRight = cv::imread(image_path + "/im1.png", cv::IMREAD_COLOR);
 	if (!imageLeft.data || !imageRight.data) {
 		std::cout << "No image data. Check file path!" << std::endl;
 		return -1;
@@ -186,16 +192,24 @@ int main(int argc, char **argv) {
 	cv::imwrite("../../results/rectifiedRight.png",
 				rightRectified);
 				
-	auto blockSearch = LinearSearch(leftRectified, rightRectified);
+	auto blockSearch = BlockSearch(leftRectified, rightRectified, 5);
     auto dispMap = blockSearch.computeDisparityMap();
     cv::imwrite("../../results/disparity_Teddy.png", dispMap);
+
+
     auto H_ = rectifier.getH_();
-    auto revertImg = cv::Mat(imageLeft.rows, imageLeft.cols, CV_64F);
+    auto revertImg = cv::Mat(imageLeft.rows, imageLeft.cols, CV_16U);
     cv::warpPerspective(dispMap,
                         revertImg,
                         H_.inv(),
                         revertImg.size());
     cv::imwrite("../../results/revertTeddyDisp.png", revertImg);
+    std::cout << revertImg << "\n";
+    // Evaluate disparity
+    auto gtDisp = trainingData.getDisparityLeft();
+    auto mask = trainingData.getMaskNonOccludedLeft();
+    evaldisp(revertImg, gtDisp, mask, 40, 1000, 1);
+
 
 	auto F_r = fundamentalMat(leftRectified,
 							  rightRectified,

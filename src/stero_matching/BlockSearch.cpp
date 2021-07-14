@@ -15,17 +15,18 @@ cv::Mat BlockSearch::computeDisparityMap() {
     std::cout << "h1:" << h1 << "\n";
     std::cout << "h2:" << h2 << "\n";
     //assert(h1 == h2);
+    int height = std::min(h1, h2);
 
     cv::Mat dispMap = cv::Mat::zeros(h1, w1, CV_64F);
     int num = 0;
-    for (int i = (blockSize-1)/2; i < h1-(blockSize-1)/2; i++) {
+    for (int i = (blockSize-1)/2; i < height-(blockSize-1)/2; i++) {
         for (int j = (blockSize-1)/2; j < w1-(blockSize-1)/2; j++) {
             if (leftImage.at<cv::Vec3b>(i, j) == cv::Vec3b{0, 0, 0})                 // skip black pixels which are at borders
                 continue;
 
             cv::Mat win1 = leftImage(cv::Rect(j - (blockSize-1)/2, i - (blockSize-1)/2,  blockSize, blockSize));
             int col = 0;
-            double min = std::numeric_limits<double>::max();;
+            double min = std::numeric_limits<double>::max();
             for (int k = j-200; k < j; k++) {
                 if (k < (blockSize-1)/2 || k >= w2-(blockSize-1)/2)
                     continue;
@@ -38,10 +39,10 @@ cv::Mat BlockSearch::computeDisparityMap() {
                     min = dist;
                 }
             }
-            dispMap.at<double>(i, j) = j - col;
+            if (j - col <= 0)
+                std::cout << "negative\n";
+            dispMap.at<uint16_t>(i, j) = static_cast<uint16_t>(j - col) * 5000;
         }
     }
-    cv::Mat dispImg;
-    cv::normalize(dispMap, dispImg, 0, 255, cv::NORM_MINMAX, CV_8UC1);
     return dispMap;
 }

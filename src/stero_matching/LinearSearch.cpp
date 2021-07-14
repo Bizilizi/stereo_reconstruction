@@ -37,8 +37,8 @@ cv::Mat LinearSearch::computeDisparityMap() {
                     min = dist;
                 }
             }
-            if (max < std::abs(j - col))
-                max = std::abs(j - col);
+            if (j - col <= 0)
+                std::cout << "negative\n";
             dispMap.at<double>(i, j) = static_cast<double>(j - col);
         }
     }

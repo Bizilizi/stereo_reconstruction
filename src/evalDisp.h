@@ -22,17 +22,17 @@ void evaldisp(cv::Mat disp, cv::Mat gtdisp, cv::Mat mask, float badthresh, float
     float serr = 0;
     for (int y = 0; y < gtShape.height; y++) {
         for (int x = 0; x < gtShape.width; x++) {
-            float gt = gtdisp.at<float>(x, y);
+            float gt = gtdisp.at<float>(y, x);
             if (gt == INFINITY)                      // unknown
                 continue;
-            float d = disp.at<float>(x, y);
+            float d = disp.at<float>(y, x);
             bool valid = (d != INFINITY);
             if (valid)
                 d = std::max(0.0f, std::min(maxdisp, d));
             if (valid && rounddisp)
                 d = round(d);
             float err = std::abs(d - gt);
-            if (mask.at<uint8_t>(x, y) != 255) {
+            if (mask.at<uint8_t>(y, x) != 255) {
                 // do not evaluate
             } else {
                 n++;
@@ -51,6 +51,7 @@ void evaldisp(cv::Mat disp, cv::Mat gtdisp, cv::Mat mask, float badthresh, float
     float invalidpercent =  100.0 * invalid / n;
     float totalbadpercent =  100.0 * ( bad + invalid ) / n;
     float avgErr = serr / (n - invalid);
+    std::cout << "number of evaluated: " << n << "\n";
     printf("%4.1f  %6.2f  %6.2f   %6.2f  %6.2f\n",   100.0*n/(gtShape.width * gtShape.height),
            badpercent, invalidpercent, totalbadpercent, avgErr);
 }
