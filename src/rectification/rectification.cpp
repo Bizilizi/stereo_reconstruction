@@ -468,6 +468,14 @@ vector<cv::Point2d> & ImageRectifier::getRectifiedRightMatches(){
 	return rightRectifiedMatches_;
 }
 
+cv::Mat ImageRectifier::getH_() {
+    return H_;
+}
+
+cv::Mat ImageRectifier::getHp_() {
+    return Hp_;
+}
+
 void ImageRectifier::setMatches(const vector<cv::KeyPoint> &leftKeyPoints,
 								const vector<cv::KeyPoint> &rightKeyPoints,
 								const std::vector<cv::DMatch> &matches) {

@@ -189,6 +189,13 @@ int main(int argc, char **argv) {
 	auto blockSearch = LinearSearch(leftRectified, rightRectified);
     auto dispMap = blockSearch.computeDisparityMap();
     cv::imwrite("../../results/disparity_Teddy.png", dispMap);
+    auto H_ = rectifier.getH_();
+    auto revertImg = cv::Mat(imageLeft.rows, imageLeft.cols, CV_64F);
+    cv::warpPerspective(dispMap,
+                        revertImg,
+                        H_.inv(),
+                        revertImg.size());
+    cv::imwrite("../../results/revertTeddyDisp.png", revertImg);
 
 	auto F_r = fundamentalMat(leftRectified,
 							  rightRectified,

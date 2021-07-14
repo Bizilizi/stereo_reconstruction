@@ -22,10 +22,12 @@ set(HEADERS
         eight_point.h
         SimpleMesh.h
         BundleAdjustment.h
+        stero_matching/LinearSearch.h
+        stero_matching/BlockSearch.h
         rectification/rectification.hpp)
 
 set(SOURCES
-        directory.cpp eight_point.cpp rectification/rectification.cpp)
+        directory.cpp eight_point.cpp stero_matching/LinearSearch.cpp stero_matching/BlockSearch.cpp rectification/rectification.cpp)
 
 #############################################################################################
 # Executables

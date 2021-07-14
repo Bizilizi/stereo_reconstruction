@@ -45,6 +45,9 @@ class ImageRectifier {
 
   vector<cv::Point2d> &getRectifiedRightMatches();
 
+  cv::Mat getH_();
+  cv::Mat getHp_();
+
   /**
    * Setters
    */
