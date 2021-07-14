@@ -8,10 +8,12 @@ set( CMAKE_CXX_STANDARD 17 )
 # Package Requirements
 find_package( Ceres REQUIRED )
 find_package( OpenCV REQUIRED )
+find_package(Eigen3 REQUIRED NO_MODULE)
 include_directories( ${OpenCV_INCLUDE_DIRS} )
+#include_directories(${EIGEN_INCLUDE_DIR})
 
 set(LIBRARY_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../libs CACHE PATH "Path to lib folder")
-set(Eigen3_INCLUDE_DIR ${LIBRARY_DIR}/eigen-3.4/ CACHE PATH "Path to Eigen source folder")
+set(Eigen3_INCLUDE_DIR ${EIGEN_INCLUDE_DIR} CACHE PATH "Path to Eigen source folder")
 
 set(Midd_SDK_INCLUDE_DIR ${LIBRARY_DIR}/MiddEval3/code/ CACHE PATH "Path to Middleburry SDK")
 set(imageLib_INCLUDE_DIR ${LIBRARY_DIR}/MiddEval3/code/imageLib/ CACHE PATH "Path to imageLib inside Middlebury SDK")
