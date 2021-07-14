@@ -171,32 +171,3 @@ void reconstruction(cv::Mat bgrImage, cv::Mat depthValues, Matrix3f intrinsics) 
     // free memory
     delete[] vertices;
 }
-
-
-bool test_reconstruction() {
-    std::string rgbPath = "../../../exercise_1/exercise_1_src/exercise_1_src/data/rgbd_dataset_freiburg1_xyz/rgb/1305031102.175304.png";
-    std::string depthPath = "../../../exercise_1/exercise_1_src/exercise_1_src/data/rgbd_dataset_freiburg1_xyz/depth/1305031102.160407.png";
-
-    cv::Mat bgrImage = cv::imread(rgbPath, cv::IMREAD_COLOR); // TODO: Fix color issue!
-    cv::Mat depthImage = cv::imread(depthPath, cv::IMREAD_UNCHANGED); // 16 bit grayscale, scaled by 5000
-
-    cv::Mat depthValues = cv::Mat(depthImage.rows, depthImage.cols, CV_32F);
-    for (int h = 0; h < depthImage.rows; h++) {
-        for (int w = 0; w < depthImage.cols; w++) {
-            if (depthImage.at<u_int16_t>(h, w) == 0) {
-                depthValues.at<float>(h, w) = MINF;
-            } else {
-                depthValues.at<float>(h, w) = (float) depthImage.at<u_int16_t>(h, w) / 5000.f;
-            }
-        }
-    }
-
-    // intrinsics
-    Matrix3f intrinsics;
-    intrinsics << 525.0f, 0.0f, 319.5f,
-                  0.0f, 525.0f, 239.5f,
-                  0.0f, 0.0f, 1.0f;
-
-    reconstruction(bgrImage, depthValues, intrinsics);
-    return true;
-}
