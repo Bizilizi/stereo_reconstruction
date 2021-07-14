@@ -9,6 +9,8 @@
 #include "Eigen.h"
 #include "directory.h"
 #include "rectification/rectification.hpp"
+#include "stero_matching/LinearSearch.h"
+#include "stero_matching/BlockSearch.h"
 
 enum detector_id {
   ORB,
