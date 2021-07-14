@@ -114,8 +114,6 @@ bool WriteMesh(Vertex* vertices, unsigned int width, unsigned int height, const 
 
 
 void reconstruction(cv::Mat bgrImage, cv::Mat depthValues, Matrix3f intrinsics) {
-    // TODO: @Tim: Aktuell werden ungültige Depth Werte als MINF erwartet
-
     float fX = intrinsics(0, 0);
     float fY = intrinsics(1, 1);
     float cX = intrinsics(0, 2);
@@ -151,10 +149,11 @@ void reconstruction(cv::Mat bgrImage, cv::Mat depthValues, Matrix3f intrinsics) 
                 vertices[idx].position = Vector4f(x_camera, y_camera, depth, 1);
 
                 // assign the color information to vertices assuming the same image size
-                Vector4uc bgr = bgrImage.at<Vector4uc>(h, w);
-                Vector4uc rgb = bgr;
-//                rgb(0) = bgr(2);
-//                rgb(2) = bgr(0);
+                Vector4uc rgb = Vector4uc::Zero();
+                rgb[0] = bgrImage.at<cv::Vec3b>(h, w)[2];
+                rgb[1] = bgrImage.at<cv::Vec3b>(h, w)[1];
+                rgb[2] = bgrImage.at<cv::Vec3b>(h, w)[0];
+                rgb[3] = 255;
                 vertices[idx].color = rgb;
             }
         }

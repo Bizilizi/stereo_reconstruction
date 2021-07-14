@@ -31,64 +31,41 @@ bool test_reconstruction_01() {
     return true;
 }
 
+
 bool test_reconstruction_02(){
     /*
     std::string rgbPath = "../../results/rectifiedImage.jpg";
     std::string disparityPath = "../../results/rectifiedDepth.jpg";
 
-    cv::Mat bgrImage = cv::imread(rgbPath, cv::IMREAD_COLOR); // TODO: Fix color issue!
+    cv::Mat bgrImage = cv::imread(rgbPath, cv::IMREAD_COLOR);
     cv::Mat disparityImage = cv::imread(disparityPath, cv::IMREAD_GRAYSCALE);
-*/
-    // convert disparity image to depth map
+    */
+
     DataLoader dataLoader = DataLoader();
-    Data teddyData = dataLoader.loadTrainingScenario(3);
+    Data trainingData = dataLoader.loadTrainingScenario(3);
 
-    cv::Mat disparityImage = teddyData.getDisparityLeft();
+    cv::Mat disparityImage = trainingData.getDisparityLeft();
 
-    // std::cout << disparityImage << std::endl;
-    std::cout << "Rows/ cols: " << disparityImage.rows << "  " << disparityImage.cols << std::endl;
+    cv::Mat bgrImage = trainingData.getImageLeft();
 
-    int count = 0, countWhite = 0;
+    float focalLength = trainingData.getCameraMatrixLeft()(0,0);
+    // float baseline = 0.01;  // due to normalization (extrinsics translation vector has length 1)
+    float baseline = 0.193001; // TODO read also baseline [mm] from calib.txt
 
-    for(int row = 0; row < disparityImage.rows; row++){
-        for(int col = 0; col < disparityImage.cols; col++){
-            if(disparityImage.at<float>(row, col) < 10) {
-                count++;
-            }
-            if(disparityImage.at<float>(row, col) > 250) {
-                countWhite++;
-            }
-        }
-    }
-
-    std::cout << "CountBlack: " << count << std::endl;
-    std::cout << "CountWhite: " << countWhite << std::endl;
-
-    cv::Mat bgrImage = teddyData.getImageLeft();
-    cv::imshow("test", bgrImage);
-
-    cv::imshow("DisparityLeft", disparityImage);
-
-    cv::waitKey();
-
-    float focalLength = teddyData.getCameraMatrixLeft()(0,0);
-    float baseline = 0.01;  // due to normalization (extrinsics translation vector has length 1)
-
-    cv::Mat depthValues = cv::Mat(disparityImage.rows, disparityImage.cols, CV_32F);
+    cv::Mat depthValues = cv::Mat(disparityImage.rows, disparityImage.cols, CV_32FC1);
     for (int h = 0; h < disparityImage.rows; h++) {
         for (int w = 0; w < disparityImage.cols; w++) {
-            if (disparityImage.at<u_int8_t>(h, w) == 0) {
+            if (disparityImage.at<float>(h, w) == 0) {
                 // no depth assigned
                 depthValues.at<float>(h, w) = MINF;
             } else {
-                depthValues.at<float>(h, w) = focalLength * baseline / (float) disparityImage.at<u_int8_t>(h, w);
+                depthValues.at<float>(h, w) = focalLength * baseline / disparityImage.at<float>(h, w);
             }
         }
     }
 
     // intrinsics
-    Matrix3f intrinsics = teddyData.getCameraMatrixLeft();
-    // Matrix3f intrinsics = Matrix3f::Identity();
+    Matrix3f intrinsics = trainingData.getCameraMatrixLeft();
 
     reconstruction(bgrImage, depthValues, intrinsics);
     return true;

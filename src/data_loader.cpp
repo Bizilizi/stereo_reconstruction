@@ -58,7 +58,7 @@ Data DataLoader::loadTrainingScenario(int scenarioIndex) {
     cv::Mat maskLeft = cv::imread(scenarioPath + "/mask0nocc.png", cv::IMREAD_UNCHANGED);
     cv::Mat maskRight = cv::imread(scenarioPath + "/mask1nocc.png", cv::IMREAD_UNCHANGED);
 
-    cv::imshow("hi", maskLeft);
+    //cv::imshow("hi", maskLeft);
 
     Data scenario = Data(imageLeft, imageRight, cameraLeft, cameraRight, dispLeft, dispRight, maskLeft, maskRight);
     return scenario;
