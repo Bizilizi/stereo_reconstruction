@@ -155,7 +155,7 @@ int main(int argc, char **argv) {
 	std::string image_path;
 	if (argc == 1) {
 		image_path =
-			getCurrentDirectory() + "/../../data/MiddEval3/trainingH/Adirondack";
+			getCurrentDirectory() + "/../../data/MiddEval3/trainingH/Teddy";
 	} else {
 		image_path = std::string(argv[1]);
 	}
@@ -183,6 +183,10 @@ int main(int argc, char **argv) {
 				leftRectified);
 	cv::imwrite("../../results/rectifiedRight.png",
 				rightRectified);
+				
+	auto blockSearch = LinearSearch(leftRectified, rightRectified);
+    auto dispMap = blockSearch.computeDisparityMap();
+    cv::imwrite("../../results/disparity_Teddy.png", dispMap);
 
 	auto F_r = fundamentalMat(leftRectified,
 							  rightRectified,
