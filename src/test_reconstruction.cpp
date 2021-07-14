@@ -33,24 +33,34 @@ bool test_reconstruction_01() {
 
 
 bool test_reconstruction_02(){
+    // our approaches
     /*
-    std::string rgbPath = "../../results/rectifiedImage.jpg";
-    std::string disparityPath = "../../results/rectifiedDepth.jpg";
+    //std::string rgbPath = "../../data/rectifiedImage.jpg";
+    //cv::Mat bgrImage = cv::imread(rgbPath, cv::IMREAD_COLOR);
+    //std::string disparityPath = "../../data/windowSearch2.jpg";
+    std::string disparityPath = "../../data/revertTeddyDisp4.png";
+    cv::Mat disparityImage16 = cv::imread(disparityPath, cv::IMREAD_UNCHANGED);
 
-    cv::Mat bgrImage = cv::imread(rgbPath, cv::IMREAD_COLOR);
-    cv::Mat disparityImage = cv::imread(disparityPath, cv::IMREAD_GRAYSCALE);
+    // dirty conversion
+    cv::Mat disparityImage = cv::Mat(disparityImage16.rows, disparityImage16.cols, CV_32FC1);
+    for (int i=0; i < disparityImage.rows; i++) {
+        for (int j=0; j < disparityImage.cols; j++) {
+            disparityImage.at<float>(i, j) = (float) disparityImage16.at<uint16_t>(i, j) / 5000.f;
+        }
+    }
     */
 
+    // ground truth
     DataLoader dataLoader = DataLoader();
     Data trainingData = dataLoader.loadTrainingScenario(3);
-
+    cv::Mat bgrImage = trainingData.getImageLeft();
     cv::Mat disparityImage = trainingData.getDisparityLeft();
 
-    cv::Mat bgrImage = trainingData.getImageLeft();
-
     float focalLength = trainingData.getCameraMatrixLeft()(0,0);
-    // float baseline = 0.01;  // due to normalization (extrinsics translation vector has length 1)
-    float baseline = 0.193001; // TODO read also baseline [mm] from calib.txt
+    // TODO read also baseline [mm] from calib.txt
+    //float baseline = 1.f;  // due to normalization (extrinsics translation vector has length 1)
+    float baseline = 0.193001f;  // Motorcycle
+    //float baseline = 0.080f;  // Teddy
 
     cv::Mat depthValues = cv::Mat(disparityImage.rows, disparityImage.cols, CV_32FC1);
     for (int h = 0; h < disparityImage.rows; h++) {

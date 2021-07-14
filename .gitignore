@@ -4,3 +4,7 @@
 **libs/
 *.zip
 *results/
+*.png
+*.jpeg
+*.jpg
+

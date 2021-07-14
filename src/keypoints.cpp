@@ -408,12 +408,10 @@ int main() {
 /**
 * TODO: next week/future
  *
- * 1. RANSAC:
+ * RANSAC:
  *      - embed RANSAC as boolean parameter in class and set mask for indices (somewhere in set/update data)
  *
- * 2. SDK: Read and load Disparity maps
- *
- * 3. Test if it works for all scenarios: Had runtime exception once (less than 8 input points!!!)
+ * Test if it works for all scenarios: Had runtime exception once (less than 8 input points!!!)
  *
  * Test fundamental matrix
  * Reconstruction Pipeline: Loading ground truth + triangulation
