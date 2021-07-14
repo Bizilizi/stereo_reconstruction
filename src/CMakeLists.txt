@@ -33,7 +33,7 @@ set(SOURCES
 # Executables
 
 add_executable(test_loading test_loading.cpp ${HEADERS} ${SOURCES})
-add_executable(rectification rectification_main.cpp ${HEADERS} ${SOURCES})
+add_executable(rectification rectification_main.cpp ${HEADERS} ${SOURCES} evalDisp.cpp evalDisp.h evalDisp.h)
 add_executable(test_bundle_adjustment test_bundle_adjustment.cpp ${HEADERS} ${SOURCES})
 
 
