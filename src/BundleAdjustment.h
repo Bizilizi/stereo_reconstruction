@@ -10,6 +10,7 @@
 #include <ceres/rotation.h>
 
 #include "Eigen.h"
+#include "utils.h"
 
 #define N_POINTS 12
 

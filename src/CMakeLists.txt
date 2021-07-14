@@ -27,10 +27,11 @@ set(HEADERS
     BundleAdjustment.h
     data_loader.h
     data.h
-    reconstruction.h)
+    reconstruction.h
+    utils.h    )
 
 set(SOURCES
-    directory.cpp eight_point.cpp data_loader.cpp data.cpp reconstruction.cpp)
+    directory.cpp eight_point.cpp data_loader.cpp data.cpp reconstruction.cpp utils.cpp)
 
 #############################################################################################
 # Executables
@@ -52,11 +53,13 @@ target_link_libraries(test_bundle_adjustment ${OpenCV_LIBS})
 
 #target_include_directories(main PUBLIC ${Eigen3_INCLUDE_DIR})
 target_include_directories(test_loading PUBLIC ${Eigen3_INCLUDE_DIR} ${imageLib_INCLUDE_DIR})
-target_include_directories(keypoints PUBLIC ${Eigen3_INCLUDE_DIR})
-target_include_directories(test_bundle_adjustment PUBLIC ${Eigen3_INCLUDE_DIR})
+target_include_directories(keypoints PUBLIC ${Eigen3_INCLUDE_DIR} ${imageLib_INCLUDE_DIR})
+target_include_directories(test_bundle_adjustment PUBLIC ${Eigen3_INCLUDE_DIR} ${imageLib_INCLUDE_DIR})
 #target_include_directories(reconstruction PUBLIC ${Eigen3_INCLUDE_DIR})
 
 target_link_libraries(test_bundle_adjustment ceres)
 target_link_libraries(test_loading ${LIBRARY_DIR}/MiddEval3/code/imageLib/libImg.x86_64-g.a )
+target_link_libraries(keypoints ${LIBRARY_DIR}/MiddEval3/code/imageLib/libImg.x86_64-g.a )
+target_link_libraries(test_bundle_adjustment ${LIBRARY_DIR}/MiddEval3/code/imageLib/libImg.x86_64-g.a )
 
 target_link_libraries(keypoints ceres)
