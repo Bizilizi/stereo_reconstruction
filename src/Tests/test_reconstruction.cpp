@@ -57,7 +57,6 @@ bool test_reconstruction_02(){
     cv::Mat disparityImage = trainingData.getDisparityLeft();
 
     float focalLength = trainingData.getCameraMatrixLeft()(0,0);
-    // TODO read also baseline [mm] from calib.txt
     //float baseline = 1.f;  // due to normalization (extrinsics translation vector has length 1)
     float baseline = 0.193001f;  // Motorcycle
     //float baseline = 0.080f;  // Teddy
@@ -93,15 +92,12 @@ bool test_reconstruction_03(){
     Data trainingData = dataLoader.loadTrainingScenario(scenarioIdx);
     cv::Mat bgrImage = trainingData.getImageLeft();
 
-    cv::Mat disparityImage =  dataLoader.loadTrainingDisparityHitNet(scenarioIdx);
+    cv::Mat disparityImage =  dataLoader.loadTrainingDisparityHitNet(scenarioIdx); // THIS LINE HERE!
 
     // std::cout << disparityImage << std::endl;
 
     float focalLength = trainingData.getCameraMatrixLeft()(0,0);
-    // TODO read also baseline [mm] from calib.txt
     float baseline = 1.f;  // due to normalization (extrinsics translation vector has length 1)
-    //float baseline = 0.193001f;  // Motorcycle
-    //float baseline = 0.080f;  // Teddy
 
     cv::Mat depthValues = cv::Mat(disparityImage.rows, disparityImage.cols, CV_32FC1);
     int count = 0;
