@@ -85,7 +85,7 @@ class ImageRectifier {
   // shearing
   cv::Mat H_1_, H_2_, H_s_, Hp_s_;
 
-  // rectification
+  // Rectification
   cv::Mat H_, Hp_;
   vector<cv::Point2d> rightRectifiedMatches_;
   vector<cv::Point2d> leftRectifiedMatches_;

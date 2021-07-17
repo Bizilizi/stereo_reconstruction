@@ -7,11 +7,11 @@
 #include <opencv2/calib3d.hpp>
 
 #include "Eigen.h"
-#include "directory.h"
-#include "rectification/rectification.hpp"
-#include "stero_matching/LinearSearch.h"
-#include "stero_matching/BlockSearch.h"
-#include "data_loader.h"
+#include "DataLoader/directory.h"
+#include "Rectification/rectification.hpp"
+#include "WindowSearch/LinearSearch.h"
+#include "WindowSearch/BlockSearch.h"
+#include "DataLoader/data_loader.h"
 #include "evalDisp.h"
 
 enum detector_id {

@@ -26,12 +26,16 @@ file(GLOB HEADERS
         DataLoader/*.h
         Reconstruction/*.h
         PoseEstimation/*.h
+        Rectification/*.h
+        WindowSearch/*.h
         )
 
 file(GLOB SOURCES
         DataLoader/*.cpp
         PoseEstimation/*.cpp
         Reconstruction/*.cpp
+        Rectification/*.cpp
+        WindowSearch/*.cpp
         utils.cpp
         )
 
@@ -43,6 +47,7 @@ add_executable(test_loading Tests/test_loading.cpp ${HEADERS} ${SOURCES})
 add_executable(test_keypoints Tests/test_keypoints.cpp ${HEADERS} ${SOURCES})
 add_executable(test_bundle_adjustment Tests/test_bundle_adjustment.cpp ${HEADERS} ${SOURCES})
 add_executable(test_reconstruction Tests/test_reconstruction.cpp ${HEADERS} ${SOURCES})
+add_executable(rectification rectification_main.cpp ${HEADERS} ${SOURCES})
 
 #############################################################################################
 # Linking
@@ -58,11 +63,22 @@ target_include_directories(test_loading PUBLIC ${Eigen3_INCLUDE_DIR} ${imageLib_
 target_include_directories(test_keypoints PUBLIC ${Eigen3_INCLUDE_DIR} ${imageLib_INCLUDE_DIR})
 target_include_directories(test_bundle_adjustment PUBLIC ${Eigen3_INCLUDE_DIR} ${imageLib_INCLUDE_DIR})
 target_include_directories(test_reconstruction PUBLIC ${Eigen3_INCLUDE_DIR} ${imageLib_INCLUDE_DIR})
+target_include_directories(rectification PUBLIC ${imageLib_INCLUDE_DIR})
 
-target_link_libraries(test_loading ${LIBRARY_DIR}/MiddEval3/code/imageLib/libImg.x86_64-g.a )
-target_link_libraries(test_keypoints ${LIBRARY_DIR}/MiddEval3/code/imageLib/libImg.x86_64-g.a )
-target_link_libraries(test_bundle_adjustment ${LIBRARY_DIR}/MiddEval3/code/imageLib/libImg.x86_64-g.a )
-target_link_libraries(test_reconstruction ${LIBRARY_DIR}/MiddEval3/code/imageLib/libImg.x86_64-g.a )
+if (APPLE)
+    target_link_libraries(rectification ${LIBRARY_DIR}/MiddEval3/code/imageLib/libImg.i386-g.a )
+    target_link_libraries(test_loading ${LIBRARY_DIR}/MiddEval3/code/imageLib/libImg.i386-g.a )
+    target_link_libraries(test_keypoints ${LIBRARY_DIR}/MiddEval3/code/imageLib/libImg.i386-g.a )
+    target_link_libraries(test_bundle_adjustment ${LIBRARY_DIR}/MiddEval3/code/imageLib/libImg.i386-g.a )
+    target_link_libraries(test_reconstruction ${LIBRARY_DIR}/MiddEval3/code/imageLib/libImg.i386-g.a )
+elseif(UNIX)
+    target_link_libraries(rectification ${LIBRARY_DIR}/MiddEval3/code/imageLib/libImg.x86_64-g.a )
+    target_link_libraries(test_loading ${LIBRARY_DIR}/MiddEval3/code/imageLib/libImg.x86_64-g.a )
+    target_link_libraries(test_keypoints ${LIBRARY_DIR}/MiddEval3/code/imageLib/libImg.x86_64-g.a )
+    target_link_libraries(test_bundle_adjustment ${LIBRARY_DIR}/MiddEval3/code/imageLib/libImg.x86_64-g.a )
+    target_link_libraries(test_reconstruction ${LIBRARY_DIR}/MiddEval3/code/imageLib/libImg.x86_64-g.a )
+endif()
+
 
 # Ceres
 target_link_libraries(test_bundle_adjustment ceres)
