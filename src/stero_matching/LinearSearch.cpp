@@ -21,8 +21,10 @@ cv::Mat LinearSearch::computeDisparityMap() {
     for (int i = 0; i < h1; i++) {
         for (int j = 0; j < w1; j++) {
 
-            if (leftImage.at<cv::Vec3b>(i, j) == cv::Vec3b{0, 0, 0})                 // skip black pixels which are at borders
+            if (leftImage.at<cv::Vec3b>(i, j) == cv::Vec3b{0, 0, 0}) {                // skip black pixels which are at borders
+                dispMap.at<double>(i, j) = INFINITY;
                 continue;
+            }
 
             int col = 0;
             cv::Vec3b pixel_ij = leftImage.at<cv::Vec3b>(i, j);
@@ -40,9 +42,10 @@ cv::Mat LinearSearch::computeDisparityMap() {
             if (j - col <= 0)
                 std::cout << "negative\n";
             dispMap.at<double>(i, j) = static_cast<double>(j - col);
+            //std::cout << static_cast<double>(j - col) << "\n";
         }
     }
-    cv::Mat dispImg;
-    cv::normalize(dispMap, dispImg, 0, 255, cv::NORM_MINMAX, CV_8UC1);
-    return dispImg;
+    //cv::Mat dispImg;
+    //cv::normalize(dispMap, dispImg, 0, 255, cv::NORM_MINMAX, CV_8UC1);
+    return dispMap;
 }

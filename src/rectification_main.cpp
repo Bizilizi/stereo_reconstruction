@@ -127,7 +127,7 @@ cv::Mat fundamentalMat(cv::Mat &one, cv::Mat &other,
 		matches = match(one,
 						other,
 						descriptor_id::BRUTE_FORCE,
-						detector_id::BRISK);
+						detector_id::ORB);
 		first = matches.first;
 		second = matches.second;
 		flag |= cv::FM_RANSAC;
@@ -195,16 +195,17 @@ int main(int argc, char **argv) {
 	auto blockSearch = BlockSearch(leftRectified, rightRectified, 5);
     auto dispMap = blockSearch.computeDisparityMap();
     cv::imwrite("../../results/disparity_Teddy.png", dispMap);
+    std::cout << dispMap << "\n";
 
 
     auto H_ = rectifier.getH_();
-    auto revertImg = cv::Mat(imageLeft.rows, imageLeft.cols, CV_16U);
+    auto revertImg = cv::Mat(imageLeft.rows, imageLeft.cols, CV_64F);
     cv::warpPerspective(dispMap,
                         revertImg,
                         H_.inv(),
                         revertImg.size());
     cv::imwrite("../../results/revertTeddyDisp.png", revertImg);
-    std::cout << revertImg << "\n";
+    //std::cout << revertImg << "\n";
     // Evaluate disparity
     auto gtDisp = trainingData.getDisparityLeft();
     auto mask = trainingData.getMaskNonOccludedLeft();

@@ -41,7 +41,7 @@ cv::Mat BlockSearch::computeDisparityMap() {
             }
             if (j - col <= 0)
                 std::cout << "negative\n";
-            dispMap.at<uint16_t>(i, j) = static_cast<uint16_t>(j - col) * 5000;
+            dispMap.at<double>(i, j) = static_cast<double>(j - col);
         }
     }
     return dispMap;
