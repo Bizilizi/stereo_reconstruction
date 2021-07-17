@@ -54,7 +54,12 @@ add_executable(test_bundle_adjustment test_bundle_adjustment.cpp ${HEADERS} ${SO
 #############################################################################################
 # Linking
 target_include_directories(rectification PUBLIC ${imageLib_INCLUDE_DIR})
-target_link_libraries(rectification ${LIBRARY_DIR}/MiddEval3/code/imageLib/libImg.x86_64-g.a )
+if (APPLE)
+    target_link_libraries(rectification ${LIBRARY_DIR}/MiddEval3/code/imageLib/libImg.i386-g.a)
+elseif(UNIX)
+    target_link_libraries(rectification ${LIBRARY_DIR}/MiddEval3/code/imageLib/libImg.x86_64-g.a )
+endif (MACOS)
+
 
 #target_link_libraries(main ${OpenCV_LIBS})
 target_link_libraries(test_loading ${OpenCV_LIBS})

@@ -6,7 +6,7 @@
 #define STEREO_RECONSTRUCTION_DATA_H
 
 #include "Eigen.h"
-#include <opencv4/opencv2/opencv.hpp>
+#include <opencv2/opencv.hpp>
 #include "imageLib.h"
 
 

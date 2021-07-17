@@ -5,7 +5,7 @@
 #ifndef STEREO_RECONSTRUCTION_DATALOADER_H
 #define STEREO_RECONSTRUCTION_DATALOADER_H
 
-#include <opencv4/opencv2/opencv.hpp>
+#include <opencv2/opencv.hpp>
 #include <filesystem>
 #include <fstream>
 #include "Eigen.h"

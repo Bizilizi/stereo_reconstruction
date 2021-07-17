@@ -164,10 +164,10 @@ int main(int argc, char **argv) {
 		image_path = std::string(argv[1]);
 	}
 
-    DataLoader dataLoader = DataLoader();
-    Data trainingData = dataLoader.loadTrainingScenario(13);
-    cv::Mat imageLeft = trainingData.getImageLeft();
-    cv::Mat imageRight = trainingData.getImageRight();
+	DataLoader dataLoader = DataLoader();
+	Data trainingData = dataLoader.loadTrainingScenario(13);
+	cv::Mat imageLeft = trainingData.getImageLeft();
+	cv::Mat imageRight = trainingData.getImageRight();
 	// load stereo images
 	//cv::Mat imageLeft = cv::imread(image_path + "/im0.png", cv::IMREAD_COLOR);
 	//cv::Mat imageRight = cv::imread(image_path + "/im1.png", cv::IMREAD_COLOR);
@@ -191,26 +191,28 @@ int main(int argc, char **argv) {
 				leftRectified);
 	cv::imwrite("../../results/rectifiedRight.png",
 				rightRectified);
-				
-	auto blockSearch = BlockSearch(leftRectified, rightRectified, 5);
-    auto dispMap = blockSearch.computeDisparityMap();
-    cv::imwrite("../../results/disparity_Teddy.png", dispMap);
-    std::cout << dispMap << "\n";
+
+	auto blockSearch = BlockSearch(leftRectified, rightRectified, 5, 150);
+	auto dispMap = blockSearch.computeDisparityMap();
+	cv::imwrite("../../results/disparity_Teddy.png", dispMap);
+//    std::cout << dispMap << "\n";
 
 
-    auto H_ = rectifier.getH_();
-    auto revertImg = cv::Mat(imageLeft.rows, imageLeft.cols, CV_64F);
-    cv::warpPerspective(dispMap,
-                        revertImg,
-                        H_.inv(),
-                        revertImg.size());
-    cv::imwrite("../../results/revertTeddyDisp.png", revertImg);
-    //std::cout << revertImg << "\n";
-    // Evaluate disparity
-    auto gtDisp = trainingData.getDisparityLeft();
-    auto mask = trainingData.getMaskNonOccludedLeft();
-    evaldisp(revertImg, gtDisp, mask, 40, 1000, 1);
+	auto H_ = rectifier.getH_();
+	auto revertImg = cv::Mat(imageLeft.rows, imageLeft.cols, CV_64F);
+	cv::warpPerspective(dispMap,
+						revertImg,
+						H_.inv(),
+						revertImg.size(),
+						cv::InterpolationFlags::INTER_NEAREST);
+	cv::imwrite("../../results/revertTeddyDisp.png", revertImg);
+	std::cout << revertImg << "\n";
 
+	// Evaluate disparity
+	auto gtDisp = trainingData.getDisparityLeft();
+//	std::cout << gtDisp << "\n";
+	auto mask = trainingData.getMaskNonOccludedLeft();
+	evaldisp(revertImg, gtDisp, mask, 40, 1000, 1);
 
 	auto F_r = fundamentalMat(leftRectified,
 							  rightRectified,
