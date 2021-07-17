@@ -18,6 +18,19 @@ DataLoader::DataLoader() {
         testScenarioPaths.emplace_back(scenario.path());
     }
     std::sort(testScenarioPaths.begin(), testScenarioPaths.end());
+
+    // prepare for HitNet
+    std::string trainingPathHitNet = getCurrentDirectory() + "/../../results/HitNet/trainingH";
+    for (const auto& scenario : std::filesystem::directory_iterator(trainingPath)) {
+        trainingScenarioPathsHitNet.emplace_back(scenario.path());
+    }
+    std::sort(trainingScenarioPathsHitNet.begin(), trainingScenarioPathsHitNet.end());
+
+    std::string testPathHitNet = getCurrentDirectory() + "/../../results/HitNet/testH";
+    for (const auto& scenario : std::filesystem::directory_iterator(testPath)) {
+        testScenarioPathsHitNet.emplace_back(scenario.path());
+    }
+    std::sort(testScenarioPathsHitNet.begin(), testScenarioPathsHitNet.end());
 }
 
 std::vector<Data> DataLoader::loadTrainingDataset() {
@@ -32,6 +45,22 @@ std::vector<Data> DataLoader::loadTestDataset() {
     std::vector<Data> testDataset;
     for (int index=0; index < 15; index++) {
         testDataset.emplace_back(loadTestScenario(index));
+    }
+    return testDataset;
+}
+
+std::vector<cv::Mat> DataLoader::loadTrainingDatasetDisparityHitNet() {
+    std::vector<cv::Mat> trainingDataset;
+    for (int index=0; index < 15; index++) {
+        trainingDataset.emplace_back(loadTrainingDisparityHitNet(index));
+    }
+    return trainingDataset;
+}
+
+std::vector<cv::Mat> DataLoader::loadTestDatasetDisparityHitNet() {
+    std::vector<cv::Mat> testDataset;
+    for (int index=0; index < 15; index++) {
+        testDataset.emplace_back(loadTestDisparityHitNet(index));
     }
     return testDataset;
 }
@@ -123,4 +152,28 @@ void DataLoader::readCameraMatrices(const std::string &scenarioPath, Matrix3f &c
     calibration.close();
 }
 
+cv::Mat DataLoader::loadTrainingDisparityHitNet(int scenarioIndex) {
+    if (scenarioIndex > 14 || scenarioIndex < 0) {
+        throw std::runtime_error("Select scenario index in range of [0; 14]");
+    }
+    std::string scenarioPath = trainingScenarioPathsHitNet[scenarioIndex];
 
+    // get disparity map
+    cv::Mat dispLeft, dispRight;
+    loadDisparityMatrices(scenarioPath, dispLeft, dispRight);
+
+    return dispLeft;
+}
+
+cv::Mat DataLoader::loadTestDisparityHitNet(int scenarioIndex) {
+    if (scenarioIndex > 14 || scenarioIndex < 0) {
+        throw std::runtime_error("Select scenario index in range of [0; 14]");
+    }
+    std::string scenarioPath = testScenarioPathsHitNet[scenarioIndex];
+
+    // get disparity map
+    cv::Mat dispLeft, dispRight;
+    loadDisparityMatrices(scenarioPath, dispLeft, dispRight);
+
+    return dispLeft;
+}

@@ -26,9 +26,9 @@ struct Vertex
 
 bool CheckTriangularValidity(Vertex* vertices, unsigned int one, unsigned int two, unsigned int three, float threshold);
 
-bool WriteMesh(Vertex* vertices, unsigned int width, unsigned int height, const std::string& filename);
+bool WriteMesh(Vertex* vertices, unsigned int width, unsigned int height, const std::string& filename, float edgeThreshold);
 
-void reconstruction(cv::Mat bgrImage, cv::Mat depthValues, Matrix3f intrinsics);
+void reconstruction(cv::Mat bgrImage, cv::Mat depthValues, Matrix3f intrinsics, float thrMarchingSquares=1.0f);
 
 bool test_reconstruction();
 

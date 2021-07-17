@@ -31,9 +31,7 @@ bool CheckTriangularValidity(Vertex* vertices, unsigned int one, unsigned int tw
 }
 
 
-bool WriteMesh(Vertex* vertices, unsigned int width, unsigned int height, const std::string& filename) {
-    float edgeThreshold = 0.01f; // 1cm
-
+bool WriteMesh(Vertex* vertices, unsigned int width, unsigned int height, const std::string& filename, float edgeThreshold) {
     // use the OFF file format to save the vertices grid (http://www.geomview.org/docs/html/OFF.html)
     // - have a look at the "off_sample.off" file to see how to store the vertices and triangles
     // - for debugging we recommend to first only write out the vertices (set the number of faces to zero)
@@ -113,7 +111,7 @@ bool WriteMesh(Vertex* vertices, unsigned int width, unsigned int height, const 
 }
 
 
-void reconstruction(cv::Mat bgrImage, cv::Mat depthValues, Matrix3f intrinsics) {
+void reconstruction(cv::Mat bgrImage, cv::Mat depthValues, Matrix3f intrinsics, float thrMarchingSquares) {
     float fX = intrinsics(0, 0);
     float fY = intrinsics(1, 1);
     float cX = intrinsics(0, 2);
@@ -162,7 +160,7 @@ void reconstruction(cv::Mat bgrImage, cv::Mat depthValues, Matrix3f intrinsics) 
     // write mesh file
     std::stringstream ss;
     ss << "../../results/reconstruction_mesh.off";
-    if (!WriteMesh(vertices, depthValues.cols, depthValues.rows, ss.str()))
+    if (!WriteMesh(vertices, depthValues.cols, depthValues.rows, ss.str(), thrMarchingSquares))
     {
         std::cout << "Failed to write mesh!\nCheck file path!" << std::endl;
     }

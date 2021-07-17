@@ -82,7 +82,53 @@ bool test_reconstruction_02(){
 }
 
 
+bool test_reconstruction_03(){
+    /*
+     * Testing with HitNet results
+     * */
+
+    int scenarioIdx = 0;
+
+    DataLoader dataLoader = DataLoader();
+    Data trainingData = dataLoader.loadTrainingScenario(scenarioIdx);
+    cv::Mat bgrImage = trainingData.getImageLeft();
+
+    cv::Mat disparityImage =  dataLoader.loadTrainingDisparityHitNet(scenarioIdx);
+
+    // std::cout << disparityImage << std::endl;
+
+    float focalLength = trainingData.getCameraMatrixLeft()(0,0);
+    // TODO read also baseline [mm] from calib.txt
+    float baseline = 1.f;  // due to normalization (extrinsics translation vector has length 1)
+    //float baseline = 0.193001f;  // Motorcycle
+    //float baseline = 0.080f;  // Teddy
+
+    cv::Mat depthValues = cv::Mat(disparityImage.rows, disparityImage.cols, CV_32FC1);
+    int count = 0;
+    for (int h = 0; h < disparityImage.rows; h++) {
+        for (int w = 0; w < disparityImage.cols; w++) {
+            if (disparityImage.at<float>(h, w) == 0) {
+                // no depth assigned
+                depthValues.at<float>(h, w) = MINF;
+                count++;
+            } else {
+                depthValues.at<float>(h, w) = focalLength * baseline / disparityImage.at<float>(h, w);
+            }
+        }
+    }
+
+    std::cout << "Number of unassigned pixel: " << count << std::endl;
+
+    // intrinsics
+    Matrix3f intrinsics = trainingData.getCameraMatrixLeft();
+
+    float thrMarchingSquares = 1;
+    reconstruction(bgrImage, depthValues, intrinsics, thrMarchingSquares);
+    return true;
+}
+
+
 int main(){
-    test_reconstruction_02();
+    test_reconstruction_03();
     return 0;
 }
