@@ -1,12 +1,9 @@
-//
-// Created by tim on 30.06.21.
-//
 
 #include <iostream>
 #include "cassert"
 
-#include "Eigen.h"
-#include "BundleAdjustment.h"
+#include "../Eigen.h"
+#include "../PoseEstimation/bundle_adjustment.h"
 
 float averageReconstructionError(const Matrix3Xf& matchesLeft, const Matrix3Xf& matchesRight,
                                  const Matrix3f& intrinsicsLeft, const Matrix3f& intrinsicsRight,

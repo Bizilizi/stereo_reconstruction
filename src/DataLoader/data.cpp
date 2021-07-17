@@ -1,6 +1,3 @@
-//
-// Created by gabriel on 07.07.21.
-//
 
 #include "data.h"
 

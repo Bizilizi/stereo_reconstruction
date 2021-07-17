@@ -19,55 +19,55 @@ set(imageLib_INCLUDE_DIR ${LIBRARY_DIR}/MiddEval3/code/imageLib/ CACHE PATH "Pat
 #############################################################################################
 # Header / Source Files
 
-set(HEADERS
-    Eigen.h
-    directory.h
-    eight_point.h
-    SimpleMesh.h
-    BundleAdjustment.h
-    data_loader.h
-    data.h
-    reconstruction.h
-    utils.h    )
 
-set(SOURCES
-    directory.cpp eight_point.cpp data_loader.cpp data.cpp reconstruction.cpp utils.cpp)
+file(GLOB HEADERS
+        Eigen.h
+        utils.h
+        DataLoader/*.h
+        Reconstruction/*.h
+        PoseEstimation/*.h
+        )
+
+file(GLOB SOURCES
+        DataLoader/*.cpp
+        PoseEstimation/*.cpp
+        Reconstruction/*.cpp
+        utils.cpp
+        )
+
 
 #############################################################################################
 # Executables
 
-add_executable(test_loading test_loading.cpp ${HEADERS} ${SOURCES})
-add_executable(keypoints keypoints.cpp ${HEADERS} ${SOURCES})
-add_executable(test_bundle_adjustment test_bundle_adjustment.cpp ${HEADERS} ${SOURCES})
-add_executable(test_reconstruction test_reconstruction.cpp ${HEADERS} ${SOURCES})
-#add_executable(reconstruction reconstruction.cpp ${HEADERS} ${SOURCES})
-
+add_executable(test_loading Tests/test_loading.cpp ${HEADERS} ${SOURCES})
+add_executable(test_keypoints Tests/test_keypoints.cpp ${HEADERS} ${SOURCES})
+add_executable(test_bundle_adjustment Tests/test_bundle_adjustment.cpp ${HEADERS} ${SOURCES})
+add_executable(test_reconstruction Tests/test_reconstruction.cpp ${HEADERS} ${SOURCES})
 
 #############################################################################################
 # Linking
 
-#target_link_libraries(main ${OpenCV_LIBS})
+# OpenCV
 target_link_libraries(test_loading ${OpenCV_LIBS})
-target_link_libraries(keypoints ${OpenCV_LIBS})
+target_link_libraries(test_keypoints ${OpenCV_LIBS})
 target_link_libraries(test_bundle_adjustment ${OpenCV_LIBS})
 target_link_libraries(test_reconstruction ${OpenCV_LIBS})
 
-#target_link_libraries(reconstruction ${OpenCV_LIBS})
-
-#target_include_directories(main PUBLIC ${Eigen3_INCLUDE_DIR})
+# Eigen / imageLib
 target_include_directories(test_loading PUBLIC ${Eigen3_INCLUDE_DIR} ${imageLib_INCLUDE_DIR})
-target_include_directories(keypoints PUBLIC ${Eigen3_INCLUDE_DIR} ${imageLib_INCLUDE_DIR})
+target_include_directories(test_keypoints PUBLIC ${Eigen3_INCLUDE_DIR} ${imageLib_INCLUDE_DIR})
 target_include_directories(test_bundle_adjustment PUBLIC ${Eigen3_INCLUDE_DIR} ${imageLib_INCLUDE_DIR})
 target_include_directories(test_reconstruction PUBLIC ${Eigen3_INCLUDE_DIR} ${imageLib_INCLUDE_DIR})
 
-#target_include_directories(reconstruction PUBLIC ${Eigen3_INCLUDE_DIR})
-
-target_link_libraries(test_bundle_adjustment ceres)
-target_link_libraries(keypoints ceres)
-
 target_link_libraries(test_loading ${LIBRARY_DIR}/MiddEval3/code/imageLib/libImg.x86_64-g.a )
-target_link_libraries(keypoints ${LIBRARY_DIR}/MiddEval3/code/imageLib/libImg.x86_64-g.a )
+target_link_libraries(test_keypoints ${LIBRARY_DIR}/MiddEval3/code/imageLib/libImg.x86_64-g.a )
 target_link_libraries(test_bundle_adjustment ${LIBRARY_DIR}/MiddEval3/code/imageLib/libImg.x86_64-g.a )
 target_link_libraries(test_reconstruction ${LIBRARY_DIR}/MiddEval3/code/imageLib/libImg.x86_64-g.a )
+
+# Ceres
+target_link_libraries(test_bundle_adjustment ceres)
+target_link_libraries(test_keypoints ceres)
+
+
 
 

@@ -1,9 +1,10 @@
+
 #pragma once
 
 #include <iostream>
 #include <fstream>
 
-#include "Eigen.h"
+#include "../Eigen.h"
 
 /**
  * NOTE: This file was taken from the 3DSMC lecture tutorial.
@@ -37,94 +38,6 @@ public:
 	/**
 	 * Constructs a mesh from the current color and depth image.
 	 */
-
-	/*
-	SimpleMesh(VirtualSensor& sensor, const Matrix4f& cameraPose, float edgeThreshold = 0.01f) {
-		// Get ptr to the current depth frame.
-		// Depth is stored in row major (get dimensions via sensor.GetDepthImageWidth() / GetDepthImageHeight()).
-		float* depthMap = sensor.getDepth();
-		// Get ptr to the current color frame.
-		// Color is stored as RGBX in row major (4 byte values per pixel, get dimensions via sensor.GetColorImageWidth() / GetColorImageHeight()).
-		BYTE* colorMap = sensor.getColorRGBX();
-
-		// Get depth intrinsics.
-		Matrix3f depthIntrinsics = sensor.getDepthIntrinsics();
-		float fovX = depthIntrinsics(0, 0);
-		float fovY = depthIntrinsics(1, 1);
-		float cX = depthIntrinsics(0, 2);
-		float cY = depthIntrinsics(1, 2);
-
-		// Compute inverse depth extrinsics.
-		Matrix4f depthExtrinsicsInv = sensor.getDepthExtrinsics().inverse();
-
-		// Compute inverse camera pose (mapping from camera CS to world CS).
-		Matrix4f cameraPoseInverse = cameraPose.inverse();
-
-		// Compute vertices with back-projection.
-		m_vertices.resize(sensor.getDepthImageWidth() * sensor.getDepthImageHeight());
-		// For every pixel row.
-		for (unsigned int v = 0; v < sensor.getDepthImageHeight(); ++v) {
-			// For every pixel in a row.
-			for (unsigned int u = 0; u < sensor.getDepthImageWidth(); ++u) {
-				unsigned int idx = v*sensor.getDepthImageWidth() + u; // linearized index
-				float depth = depthMap[idx];
-				if (depth == MINF) {
-					m_vertices[idx].position = Vector4f(MINF, MINF, MINF, MINF);
-					m_vertices[idx].color = Vector4uc(0, 0, 0, 0);
-				}
-				else {
-					// Back-projection and tranformation to world space.
-					m_vertices[idx].position = cameraPoseInverse * depthExtrinsicsInv * Vector4f((u - cX) / fovX * depth, (v - cY) / fovY * depth, depth, 1.0f);
-
-					// Project position to color map.
-					Vector3f proj = sensor.getColorIntrinsics() * (sensor.getColorExtrinsics() * cameraPose * m_vertices[idx].position).block<3, 1>(0, 0);
-					proj /= proj.z(); // dehomogenization
-					unsigned int uCol = (unsigned int)std::floor(proj.x());
-					unsigned int vCol = (unsigned int)std::floor(proj.y());
-					if (uCol >= sensor.getColorImageWidth()) uCol = sensor.getColorImageWidth() - 1;
-					if (vCol >= sensor.getColorImageHeight()) vCol = sensor.getColorImageHeight() - 1;
-					unsigned int idxCol = vCol*sensor.getColorImageWidth() + uCol; // linearized index color
-																					//unsigned int idxCol = idx; // linearized index color
-
-					// Write color to vertex.
-					m_vertices[idx].color = Vector4uc(colorMap[4 * idxCol + 0], colorMap[4 * idxCol + 1], colorMap[4 * idxCol + 2], colorMap[4 * idxCol + 3]);
-				}
-			}
-		}
-
-		// Compute triangles (faces).
-		m_triangles.reserve((sensor.getDepthImageHeight() - 1) * (sensor.getDepthImageWidth() - 1) * 2);
-		for (unsigned int i = 0; i < sensor.getDepthImageHeight() - 1; i++) {
-			for (unsigned int j = 0; j < sensor.getDepthImageWidth() - 1; j++) {
-				unsigned int i0 = i*sensor.getDepthImageWidth() + j;
-				unsigned int i1 = (i + 1)*sensor.getDepthImageWidth() + j;
-				unsigned int i2 = i*sensor.getDepthImageWidth() + j + 1;
-				unsigned int i3 = (i + 1)*sensor.getDepthImageWidth() + j + 1;
-
-				bool valid0 = m_vertices[i0].position.allFinite();
-				bool valid1 = m_vertices[i1].position.allFinite();
-				bool valid2 = m_vertices[i2].position.allFinite();
-				bool valid3 = m_vertices[i3].position.allFinite();
-
-				if (valid0 && valid1 && valid2) {
-					float d0 = (m_vertices[i0].position - m_vertices[i1].position).norm();
-					float d1 = (m_vertices[i0].position - m_vertices[i2].position).norm();
-					float d2 = (m_vertices[i1].position - m_vertices[i2].position).norm();
-					if (edgeThreshold > d0 && edgeThreshold > d1 && edgeThreshold > d2)
-						addFace(i0, i1, i2);
-				}
-				if (valid1 && valid2 && valid3) {
-					float d0 = (m_vertices[i3].position - m_vertices[i1].position).norm();
-					float d1 = (m_vertices[i3].position - m_vertices[i2].position).norm();
-					float d2 = (m_vertices[i1].position - m_vertices[i2].position).norm();
-					if (edgeThreshold > d0 && edgeThreshold > d1 && edgeThreshold > d2)
-						addFace(i1, i3, i2);
-				}
-			}
-		}
-	}
-
-	*/
 
 	void clear() {
 		m_vertices.clear();

@@ -1,6 +1,3 @@
-//
-// Created by gabriel on 11.07.21.
-//
 
 #include "reconstruction.h"
 

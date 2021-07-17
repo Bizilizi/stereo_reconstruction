@@ -1,6 +1,6 @@
 
-#include "reconstruction.h"
-#include "data_loader.h"
+#include "../Reconstruction/reconstruction.h"
+#include "../DataLoader/data_loader.h"
 
 
 bool test_reconstruction_01() {

@@ -1,12 +1,7 @@
-//
-// Created by tim on 15.06.21.
-//
 
 #include <iostream>
 #include <opencv4/opencv2/opencv.hpp>
-#include "data_loader.h"
-
-#include "reconstruction.h"
+#include "../DataLoader/data_loader.h"
 
 
 void displayStereoImages(const cv::Mat &image1, const cv::Mat &image2){
@@ -35,16 +30,6 @@ int main(int argc, char** argv ) {
 
     //std::cout << trainingData.getCameraMatrixLeft() << std::endl << trainingData.getCameraMatrixRight() << std::endl;
     std::cout << testDataset[14].getCameraMatrixLeft() << std::endl << testDataset[14].getCameraMatrixRight() << std::endl;
-
-    /*
-    // Disparity map
-    // TODO: Use SDK and cvkit
-    // SDK: load image
-    // cvkit: display image
-    cv::Mat rawDispImage = cv::imread(image_path + "/disp0GT.pfm", cv::IMREAD_UNCHANGED);
-    */
-
-    //test_reconstruction();
 
     return 0;
 }

@@ -1,6 +1,3 @@
-//
-// Created by gabriel on 12.07.21.
-//
 
 #ifndef STEREO_RECONSTRUCTION_RECONSTRUCTION_H
 #define STEREO_RECONSTRUCTION_RECONSTRUCTION_H
@@ -10,7 +7,7 @@
 #include <array>
 #include <opencv4/opencv2/opencv.hpp>
 
-#include "Eigen.h"
+#include "../Eigen.h"
 
 
 struct Vertex

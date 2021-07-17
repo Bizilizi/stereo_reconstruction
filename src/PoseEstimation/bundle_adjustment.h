@@ -1,16 +1,13 @@
-//
-// Created by tim on 22.06.21.
-//
 
-#ifndef STEREO_RECONSTRUCTION_BUNDLEADJUSTMENT_H
-#define STEREO_RECONSTRUCTION_BUNDLEADJUSTMENT_H
+#ifndef STEREO_RECONSTRUCTION_BUNDLE_ADJUSTMENT_H
+#define STEREO_RECONSTRUCTION_BUNDLE_ADJUSTMENT_H
 
 #include <stdio.h>
 #include <ceres/ceres.h>
 #include <ceres/rotation.h>
 
-#include "Eigen.h"
-#include "utils.h"
+#include "../Eigen.h"
+#include "../utils.h"
 
 #define N_POINTS 12
 
@@ -290,4 +287,4 @@ private:
     Matrix3Xf m_optimizedLeftPoints3D;
 };
 
-#endif //STEREO_RECONSTRUCTION_BUNDLEADJUSTMENT_H
+#endif //STEREO_RECONSTRUCTION_BUNDLE_ADJUSTMENT_H

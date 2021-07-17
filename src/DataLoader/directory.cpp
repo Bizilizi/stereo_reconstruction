@@ -1,6 +1,3 @@
-//
-// Created by gabriel on 19.06.21.
-//
 
 #include <stdio.h>  /* defines FILENAME_MAX */
 // #define WINDOWS  /* uncomment this line to use it for windows.*/

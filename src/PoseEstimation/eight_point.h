@@ -1,11 +1,8 @@
-//
-// Created by gabriel on 21.06.21.
-//
 
 #ifndef STEREO_RECONSTRUCTION_EIGHT_POINT_H
 #define STEREO_RECONSTRUCTION_EIGHT_POINT_H
 
-#include "Eigen.h"
+#include "../Eigen.h"
 
 class EightPointAlgorithm {
 /**
@@ -86,5 +83,14 @@ private:
     Matrix3Xf pointsRightReconstructed;
 
 };
+
+std::vector<int> getRandomIndices(int maxIdx, int length, std::vector<int> init = {}, std::vector<int> exclude = {});
+
+
+EightPointAlgorithm
+RANSAC(const MatrixXf &kpLeftMat, const MatrixXf &kpRightMat, const Matrix3f &cameraLeft, const Matrix3f &cameraRight);
+
+VectorXf calculateEuclideanPixelError(const MatrixXf &leftToRightProjection, const MatrixXf &matchesRight);
+
 
 #endif //STEREO_RECONSTRUCTION_EIGHT_POINT_H

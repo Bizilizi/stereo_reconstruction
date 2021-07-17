@@ -1,11 +1,8 @@
-//
-// Created by gabriel on 07.07.21.
-//
 
 #ifndef STEREO_RECONSTRUCTION_DATA_H
 #define STEREO_RECONSTRUCTION_DATA_H
 
-#include "Eigen.h"
+#include "../Eigen.h"
 #include <opencv4/opencv2/opencv.hpp>
 #include "imageLib.h"
 
