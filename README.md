@@ -23,10 +23,29 @@ OpenCV uses dynamic linking which means that some functions that depend on third
 <pre><code> sudo apt-get install libopencv-* </code></pre>
 After that, opencv has to be rebuilt and reinstalled. 
 
-3. Ceres - TBD
+3. Ceres - Set up as described in tutorial for 3DSMC
 
-4. SDK - TDB 
-Can be downloaded here: https://vision.middlebury.edu/stereo/submit3/
+4. SDK 
+The SDK includes dataloding functions and evaluation metrics. 
+Please download the SDK here: https://vision.middlebury.edu/stereo/submit3/
+Extract the zip and place the folder MiddEval3 under libs/. The data structure should now look like this: libs/MiddEval3/code/imageLib .
+
+Deactivate the flag "" in MiddEval3/code/imageLib/ImageIO.cpp by commenting out the line: 
+<pre> <code> // in file: ImageIO.cpp
+
+  // Comment out next line if you don't have the PNG library
+  // #define HAVE_PNG_LIB 
+
+</code></pre>
+
+   
+Build the imageLib: 
+<pre> <code> cd libs/MiddEval3/code/imageLib
+  make 
+</code></pre>
+
+Clean your project, reload cmake and rebuild everything. 
+
 
 ### Data visualization 
 OpenCV does not support PFM files, so we can use CVKIT to display the disparity images. 

@@ -3,4 +3,8 @@
 **.idea/
 **libs/
 *.zip
-*results/
+/results/*.png
+/results/*.off
+/results/*.jpg
+/results/*.pfm
+
