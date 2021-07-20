@@ -8,6 +8,7 @@ set( CMAKE_CXX_STANDARD 17 )
 # Package Requirements
 find_package( Ceres REQUIRED )
 find_package( OpenCV REQUIRED )
+
 include_directories( ${OpenCV_INCLUDE_DIRS} )
 
 set(LIBRARY_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../libs CACHE PATH "Path to lib folder")
