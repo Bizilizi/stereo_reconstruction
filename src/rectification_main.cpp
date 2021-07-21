@@ -192,7 +192,7 @@ int main(int argc, char **argv) {
 	cv::imwrite("../../results/rectifiedRight.png",
 				rightRectified);
 
-	auto blockSearch = BlockSearch(leftRectified, rightRectified, 3, 100);
+	auto blockSearch = BlockSearch(leftRectified, rightRectified, 17, 100);
 	auto dispMap = blockSearch.computeDisparityMap(0.8);
 	cv::imwrite("../../results/disparity_Teddy.png", dispMap);
 //    std::cout << dispMap << "\n";
