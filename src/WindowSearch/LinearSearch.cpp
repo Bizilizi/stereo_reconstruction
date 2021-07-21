@@ -7,7 +7,7 @@ LinearSearch::LinearSearch(cv::Mat &leftImage, cv::Mat &rightImage)
 
 }
 
-cv::Mat LinearSearch::computeDisparityMap() {
+cv::Mat LinearSearch::computeDisparityMap(double smoothFactor) {
     int h1 = leftImage.rows;
     int w1 = leftImage.cols;
     int h2 = rightImage.rows;
@@ -33,16 +33,24 @@ cv::Mat LinearSearch::computeDisparityMap() {
                 if (k < 0)
                     continue;
                 cv::Vec3b pixel_ik = rightImage.at<cv::Vec3b>(i, k);
-                double dist = cv::norm(pixel_ij - pixel_ik);
+                double dist = std::sqrt(std::pow(pixel_ij[0] - pixel_ik[0], 2) +
+                            std::pow(pixel_ij[1] - pixel_ik[1], 2) + std::pow(pixel_ij[2] - pixel_ik[2], 2));
+
+                if (i >= 1 && dispMap.at<double>(i-1, j) == static_cast<double>(j-k)) {
+                    dist *= smoothFactor;
+                }
+                if (j >= 1 && dispMap.at<double>(i, j-1) == static_cast<double>(j-k)) {
+                    dist *= smoothFactor;
+                }
+
                 if (dist < min) {
                     col = k;
                     min = dist;
                 }
             }
-            if (j - col <= 0)
+            if (j - col < 0)
                 std::cout << "negative\n";
             dispMap.at<double>(i, j) = static_cast<double>(j - col);
-            //std::cout << static_cast<double>(j - col) << "\n";
         }
     }
     //cv::Mat dispImg;

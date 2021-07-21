@@ -1,8 +1,8 @@
 
 #include <iostream>
 
-#include <opencv2/core.hpp>
-#include <opencv2/features2d.hpp>
+#include <opencv4/opencv2/core.hpp>
+#include <opencv4/opencv2/features2d.hpp>
 
 #include "../Reconstruction/simple_mesh.h"
 

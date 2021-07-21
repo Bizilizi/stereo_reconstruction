@@ -12,7 +12,7 @@ class LinearSearch {
 public:
     LinearSearch(cv::Mat &leftImage, cv::Mat &rightImage);
 
-    cv::Mat computeDisparityMap();
+    cv::Mat computeDisparityMap(double smoothFactor);
 };
 
 

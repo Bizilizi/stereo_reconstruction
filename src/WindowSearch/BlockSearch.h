@@ -13,7 +13,7 @@ class BlockSearch {
 			  int blockSize,
 			  int maxDisparity);
 
-  cv::Mat computeDisparityMap();
+  cv::Mat computeDisparityMap(double smoothFactor);
  private:
   cv::Mat leftImage_;
   cv::Mat rightImage_;

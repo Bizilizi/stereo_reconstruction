@@ -10,7 +10,7 @@ BlockSearch::BlockSearch(cv::Mat &leftImage,
 
 }
 
-cv::Mat BlockSearch::computeDisparityMap() {
+cv::Mat BlockSearch::computeDisparityMap(double smoothFactor) {
 	int h1 = leftImage_.size().height;
 	int w1 = leftImage_.size().width;
 	int h2 = rightImage_.size().height;
@@ -50,7 +50,16 @@ cv::Mat BlockSearch::computeDisparityMap() {
 														   blockSize_,
 														   blockSize_));
 
-				double dist = cv::norm(leftWindow - rightWindow);
+				cv::Mat diff;
+				cv::absdiff(leftWindow, rightWindow, diff);
+				double dist = cv::norm(diff, cv::NORM_L2);
+
+                if (pointY >= 1 && disparityMap.at<double>(pointY-1, pointX) == static_cast<double>(pointX-correspondX)) {
+                    dist *= smoothFactor;
+                }
+                if (pointX >= 1 && disparityMap.at<double>(pointY, pointX-1) == static_cast<double>(pointX-correspondX)) {
+                    dist *= smoothFactor;
+                }
 
 				// update minimum if found
 				if (dist < min) {
