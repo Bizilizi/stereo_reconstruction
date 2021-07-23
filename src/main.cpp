@@ -157,7 +157,6 @@ int main(){
      * 1. Estimate Extrinsics (Fundamental Matrix)
      */
 
-#if 0
     // find keypoints
     std::vector<cv::KeyPoint> keypointsLeft, keypointsRight;
     cv::Mat featuresLeft, featuresRight;
@@ -181,10 +180,11 @@ int main(){
     auto optimizer = BundleAdjustmentOptimizer(ep.getMatchesLeft(), ep.getMatchesRight(), data.getCameraMatrixLeft(),
                                                data.getCameraMatrixRight(), pose(seqN(0, 3), seqN(0, 3)),
                                                pose(seqN(0, 3), 3), ep.getPointsLeftReconstructed());
+    optimizer.estimatePose();
     Matrix3f fundamentalMatrix = optimizer.getFundamentalMatrix();
 
     std::cout << "Fundamental matrix: " << std::endl << fundamentalMatrix << std::endl;
-#endif
+
     /**
      * 2. Compute Disparity Map
      */
