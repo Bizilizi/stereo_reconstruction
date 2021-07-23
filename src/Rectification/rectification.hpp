@@ -62,12 +62,15 @@ public:
      * compute the disparity map of the left image
      */
     void computeDisparityMapLeft(int blockSize, int maxDisparity, double smoothFactor);
+
+	/**
+	* compute the disparity map of the left image
+	*/
     void computeDisparityMapRight(int blockSize, int maxDisparity, double smoothFactor);
 
     /**
      * Setters
      */
-
     void setMatches(const std::vector<cv::KeyPoint> &leftKeyPoints,
                     const std::vector<cv::KeyPoint> &rightKeyPoints,
                     const std::vector<cv::DMatch> &matches);

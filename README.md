@@ -1,3 +1,13 @@
+##Structure overview
+**Source code**  
+The source code related to C++ implementation of pipeline can be found in `src`  directory.  
+  
+**Evaluations**  
+Evaluated results for every approach are stored in `result` directory.  
+  
+**Perceptuall loss**    
+Python implementation for window search with perceptuall loss can be find either in `perceptual_window_search` directory or by this link [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/drive/1-_9nUCgVG-z5bmwzbjZFOWufCbO8qSbb?usp=sharing]
+
 
 
 ##Setting up this project
