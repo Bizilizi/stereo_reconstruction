@@ -57,15 +57,27 @@ void ImageRectifier::run() {
 	rectifyImagesAndKeyPoints();
 }
 
-void ImageRectifier::computeDisparityMap(int blockSize, int maxDisparity, double smoothFactor) {
+void ImageRectifier::computeDisparityMapLeft(int blockSize, int maxDisparity, double smoothFactor) {
     auto blockSearch = BlockSearch(leftRectifiedImage_, rightRectifiedImage_, blockSize, maxDisparity);
-    auto disparityMap_rect = blockSearch.computeDisparityMap(smoothFactor);
+    auto disparityMap_rect = blockSearch.computeDisparityMapLeft(smoothFactor);
 
-    disparityMap = cv::Mat(leftImage_.rows, leftImage_.cols, CV_64F);
+    disparityMapLeft = cv::Mat(leftImage_.rows, leftImage_.cols, CV_64F);
     cv::warpPerspective(disparityMap_rect,
-                        disparityMap,
+                        disparityMapLeft,
                         H_.inv(),
-                        disparityMap.size(),
+                        disparityMapLeft.size(),
+                        cv::InterpolationFlags::INTER_NEAREST);
+}
+
+void ImageRectifier::computeDisparityMapRight(int blockSize, int maxDisparity, double smoothFactor) {
+    auto blockSearch = BlockSearch(leftRectifiedImage_, rightRectifiedImage_, blockSize, maxDisparity);
+    auto disparityMap_rect = blockSearch.computeDisparityMapRight(smoothFactor);
+
+    disparityMapRight = cv::Mat(rightImage_.rows, rightImage_.cols, CV_64F);
+    cv::warpPerspective(disparityMap_rect,
+                        disparityMapRight,
+                        H_.inv(),
+                        disparityMapRight.size(),
                         cv::InterpolationFlags::INTER_NEAREST);
 }
 
@@ -494,8 +506,12 @@ vector<cv::Point2d> & ImageRectifier::getRectifiedRightMatches(){
 	return rightRectifiedMatches_;
 }
 
-const cv::Mat &ImageRectifier::getDisparityMap() const {
-    return disparityMap;
+const cv::Mat &ImageRectifier::getDisparityMapLeft() const {
+    return disparityMapLeft;
+}
+
+const cv::Mat &ImageRectifier::getDisparityMapRight() const {
+    return disparityMapRight;
 }
 
 cv::Mat ImageRectifier::getH_() {
