@@ -10,7 +10,7 @@ BlockSearch::BlockSearch(cv::Mat &leftImage,
 
 }
 
-cv::Mat BlockSearch::computeDisparityMap(double smoothFactor) {
+cv::Mat BlockSearch::computeDisparityMapLeft(double smoothFactor) {
 	int h1 = leftImage_.size().height;
 	int w1 = leftImage_.size().width;
 	int h2 = rightImage_.size().height;
@@ -72,4 +72,68 @@ cv::Mat BlockSearch::computeDisparityMap(double smoothFactor) {
 		}
 	}
 	return disparityMap;
+}
+
+cv::Mat BlockSearch::computeDisparityMapRight(double smoothFactor) {
+    int h1 = leftImage_.size().height;
+    int w1 = leftImage_.size().width;
+    int h2 = rightImage_.size().height;
+    int w2 = rightImage_.size().width;
+
+    int height = std::min(h1, h2);
+    int halfBlockSize = (blockSize_ - 1) / 2;
+
+    cv::Mat disparityMap = cv::Mat::zeros(h2, w2, CV_64F);
+
+    // Iterate over height
+    for (int pointY = halfBlockSize; pointY < height - halfBlockSize; ++pointY) {
+        // Iterate over width
+        for (int pointX = halfBlockSize; pointX < w2 - halfBlockSize; ++pointX) {
+
+            // Skip black pixels which are at borders e.g have black color
+            if (rightImage_.at<cv::Vec3b>(pointY, pointX) == cv::Vec3b{0, 0, 0}) {
+                disparityMap.at<double>(pointY, pointX) = INFINITY;
+                continue;
+            }
+
+            cv::Mat rightWindow = rightImage_(cv::Rect(pointX - halfBlockSize,
+                                                     pointY - halfBlockSize,
+                                                     blockSize_,
+                                                     blockSize_));
+            int minimumCorrespondX = 0;
+            double min = std::numeric_limits<double>::max();
+
+            for (int correspondX = pointX; correspondX < pointX + maxDisparity_; correspondX++) {
+
+                if (correspondX < halfBlockSize || correspondX >= w1 - halfBlockSize) {
+                    continue;
+                }
+
+                cv::Mat leftWindow = leftImage_(cv::Rect(correspondX - halfBlockSize,
+                                                           pointY - halfBlockSize,
+                                                           blockSize_,
+                                                           blockSize_));
+
+                cv::Mat diff;
+                cv::absdiff(leftWindow, rightWindow, diff);
+                double dist = cv::norm(diff, cv::NORM_L2);
+
+                if (pointY >= 1 && disparityMap.at<double>(pointY-1, pointX) == static_cast<double>(pointX-correspondX)) {
+                    dist *= smoothFactor;
+                }
+                if (pointX >= 1 && disparityMap.at<double>(pointY, pointX-1) == static_cast<double>(pointX-correspondX)) {
+                    dist *= smoothFactor;
+                }
+
+                // update minimum if found
+                if (dist < min) {
+                    minimumCorrespondX = correspondX;
+                    min = dist;
+                }
+            }
+
+            disparityMap.at<double>(pointY, pointX) = static_cast<double>(minimumCorrespondX - pointX);
+        }
+    }
+    return disparityMap;
 }
