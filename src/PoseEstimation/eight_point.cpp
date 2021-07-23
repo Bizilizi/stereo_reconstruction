@@ -167,9 +167,14 @@ void EightPointAlgorithm::setMatches(const Matrix3Xf &leftMatches, const Matrix3
         throw std::runtime_error("Inputs matrices have to contain same amount of points");
     }
 
+    std::cout << leftMatches << std::endl;
+    std::cout << rightMatches << std::endl;
     std::vector<int> uniqueIdx = uniqueColumnsInMatrix(leftMatches);
     matchesLeft = leftMatches(all, uniqueIdx);
     matchesRight = rightMatches(all, uniqueIdx);
+
+    std::cout << matchesLeft << std::endl;
+    std::cout << matchesRight << std::endl;
 
     numMatches = (int) matchesLeft.cols();
     if (numMatches < 8) {

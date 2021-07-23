@@ -90,12 +90,18 @@ int main() {
 
     // estimate pose using the eight point algorithm
     Matrix3Xf kpLeftMat, kpRightMat;
-    transformMatchedKeypointsToEigen(keypointsLeft, keypointsRight, matches, kpLeftMat, kpRightMat);
+    keypointsLeft.resize(20);
+    keypointsRight.resize(20);
+    matches.resize(20);
+
+    transformMatchedKeypointsToEigen(keypointsLeft, keypointsRight, matches, kpLeftMat, kpRightMat, true);
+    std::cout << kpLeftMat << std::endl;
+    std::cout << kpRightMat << std::endl;
 
     // TODO: Embed RANSAC to Eight-point class instead of using dirty solution
-    EightPointAlgorithm dirtyFix(kpLeftMat, kpRightMat, data.getCameraMatrixLeft(), data.getCameraMatrixRight());
+    // EightPointAlgorithm dirtyFix(kpLeftMat, kpRightMat, data.getCameraMatrixLeft(), data.getCameraMatrixRight());
 
-    EightPointAlgorithm ep = RANSAC(dirtyFix.getMatchesLeft(), dirtyFix.getMatchesRight(), data.getCameraMatrixLeft(),
+    EightPointAlgorithm ep = RANSAC(kpLeftMat,  kpRightMat, data.getCameraMatrixLeft(),
                                     data.getCameraMatrixRight());
     ep.run();
 

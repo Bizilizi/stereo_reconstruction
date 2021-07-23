@@ -30,12 +30,14 @@ VectorXf kron(const VectorXf &vec1, const VectorXf &vec2);
  * @param matches cv::DMatch instance that contains the indices of matched keypoints
  * @param outLeft output matrix for keypoints in left picture
  * @param outRight output matrix for keypoints in right picture
+ * @param filterDuplicates filters out duplicates in matches
  */
 void transformMatchedKeypointsToEigen(const std::vector<cv::KeyPoint> &keypointsLeft,
                                       const std::vector<cv::KeyPoint> &keypointsRight,
                                       const std::vector<cv::DMatch> &matches,
                                       Matrix3Xf &outLeft,
-                                      Matrix3Xf &outRight);
+                                      Matrix3Xf &outRight,
+                                      bool filterDuplicates = true);
 
 /**
  * Returns the column indices corresponding to unique elements.

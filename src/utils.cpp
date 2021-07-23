@@ -33,7 +33,8 @@ void transformMatchedKeypointsToEigen(const std::vector<cv::KeyPoint> &keypoints
                                       const std::vector<cv::KeyPoint> &keypointsRight,
                                       const std::vector<cv::DMatch> &matches,
                                       Matrix3Xf &outLeft,
-                                      Matrix3Xf &outRight) {
+                                      Matrix3Xf &outRight,
+                                      bool filterDuplicates) {
     outLeft = Matrix3Xf::Zero(3, matches.size());
     outRight = Matrix3Xf::Zero(3, matches.size());
 
@@ -42,6 +43,15 @@ void transformMatchedKeypointsToEigen(const std::vector<cv::KeyPoint> &keypoints
         outLeft.col(i) = Vector3f(keypointsLeft[match.queryIdx].pt.x, keypointsLeft[match.queryIdx].pt.y, 1);
         outRight.col(i) = Vector3f(keypointsRight[match.trainIdx].pt.x, keypointsRight[match.trainIdx].pt.y, 1);
         i++;
+    }
+
+    if (filterDuplicates) {
+        std::vector<int> uniqueIdx = uniqueColumnsInMatrix(outLeft);
+        Matrix3Xf tmp = Matrix3Xf::Zero(3, uniqueIdx.size());
+        tmp = outLeft(all, uniqueIdx);
+        outLeft = tmp;
+        tmp = outRight(all, uniqueIdx);
+        outRight = tmp;
     }
 }
 

@@ -173,10 +173,7 @@ int main(){
     Matrix3Xf kpLeftMat, kpRightMat;
     transformMatchedKeypointsToEigen(keypointsLeft, keypointsRight, matches, kpLeftMat, kpRightMat);
 
-    // TODO: Embed RANSAC to Eight-point class instead of using dirty solution
-    EightPointAlgorithm dirtyFix(kpLeftMat, kpRightMat, data.getCameraMatrixLeft(), data.getCameraMatrixRight());
-
-    EightPointAlgorithm ep = RANSAC(dirtyFix.getMatchesLeft(), dirtyFix.getMatchesRight(), data.getCameraMatrixLeft(),
+    EightPointAlgorithm ep = RANSAC(kpLeftMat, kpRightMat, data.getCameraMatrixLeft(),
                                     data.getCameraMatrixRight());
     ep.run();
 
