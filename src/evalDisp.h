@@ -1,5 +1,4 @@
 
-
 #ifndef STEREO_RECONSTRUCTION_EVALDISP_H
 #define STEREO_RECONSTRUCTION_EVALDISP_H
 
@@ -7,6 +6,10 @@
 #include <cassert>
 #include <math.h>
 #include <stdlib.h>
+
+/*
+ * Note: Adopted from imageLib in the Middlebury SDK
+ * */
 
 void evaldisp(cv::Mat disp, cv::Mat gtdisp, cv::Mat mask, float badthresh, float maxdisp, int rounddisp)
 {

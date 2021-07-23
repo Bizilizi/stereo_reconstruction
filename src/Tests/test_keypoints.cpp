@@ -61,7 +61,7 @@ int main() {
     DataLoader dataLoader = DataLoader();
 
     // select scenarios by index (alphabetic position starting with 0)
-    Data data = dataLoader.loadTrainingScenario(1);
+    Data data = dataLoader.loadTrainingScenario(3);
 
     // find keypoints
     std::vector<cv::KeyPoint> keypointsLeft, keypointsRight;

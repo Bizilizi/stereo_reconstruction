@@ -32,6 +32,8 @@ bool test_reconstruction_01() {
 }
 
 
+
+
 bool test_reconstruction_02(){
     // our approaches
     /*
@@ -58,20 +60,10 @@ bool test_reconstruction_02(){
 
     float focalLength = trainingData.getCameraMatrixLeft()(0,0);
     //float baseline = 1.f;  // due to normalization (extrinsics translation vector has length 1)
-    float baseline = 0.193001f;  // Motorcycle
+    float baseline = 1.0;  // Motorcycle
     //float baseline = 0.080f;  // Teddy
 
-    cv::Mat depthValues = cv::Mat(disparityImage.rows, disparityImage.cols, CV_32FC1);
-    for (int h = 0; h < disparityImage.rows; h++) {
-        for (int w = 0; w < disparityImage.cols; w++) {
-            if (disparityImage.at<float>(h, w) == 0) {
-                // no depth assigned
-                depthValues.at<float>(h, w) = MINF;
-            } else {
-                depthValues.at<float>(h, w) = focalLength * baseline / disparityImage.at<float>(h, w);
-            }
-        }
-    }
+    cv::Mat depthValues = convertDispartiyToDepth(disparityImage, focalLength, baseline);
 
     // intrinsics
     Matrix3f intrinsics = trainingData.getCameraMatrixLeft();
@@ -99,21 +91,7 @@ bool test_reconstruction_03(){
     float focalLength = trainingData.getCameraMatrixLeft()(0,0);
     float baseline = 1.f;  // due to normalization (extrinsics translation vector has length 1)
 
-    cv::Mat depthValues = cv::Mat(disparityImage.rows, disparityImage.cols, CV_32FC1);
-    int count = 0;
-    for (int h = 0; h < disparityImage.rows; h++) {
-        for (int w = 0; w < disparityImage.cols; w++) {
-            if (disparityImage.at<float>(h, w) == 0) {
-                // no depth assigned
-                depthValues.at<float>(h, w) = MINF;
-                count++;
-            } else {
-                depthValues.at<float>(h, w) = focalLength * baseline / disparityImage.at<float>(h, w);
-            }
-        }
-    }
-
-    std::cout << "Number of unassigned pixel: " << count << std::endl;
+    cv::Mat depthValues = convertDispartiyToDepth(disparityImage, focalLength, baseline);
 
     // intrinsics
     Matrix3f intrinsics = trainingData.getCameraMatrixLeft();

@@ -2,6 +2,8 @@
 
 #include <utility>
 #include "z_optimization.hpp"
+#include "../WindowSearch/BlockSearch.h"
+#include "../WindowSearch/LinearSearch.h"
 
 ImageRectifier::ImageRectifier(const cv::Mat &leftImage,
 							   const cv::Mat &rightImage,
@@ -14,6 +16,18 @@ ImageRectifier::ImageRectifier(const cv::Mat &leftImage,
 	setFundamentalMatrix(fundamentalMatrix);
 	setMatches(leftKeyPoints, rightKeyPoints, matches);
 	run();
+}
+
+ImageRectifier::ImageRectifier(const cv::Mat &leftImage,
+                               const cv::Mat &rightImage,
+                               const Matrix3Xf &fundamentalMatrix,
+                               const Matrix3Xf &leftKeyPoints,
+                               const Matrix3Xf &rightKeyPoints)
+        : leftImage_{leftImage}, rightImage_{rightImage} {
+
+    setFundamentalMatrix(fundamentalMatrix);
+    setMatches(leftKeyPoints, rightKeyPoints);
+    run();
 }
 
 ImageRectifier::ImageRectifier(const cv::Mat &leftImage,
@@ -41,6 +55,18 @@ void ImageRectifier::run() {
 	computeSimilarity();
 	computeShearingTransforms();
 	rectifyImagesAndKeyPoints();
+}
+
+void ImageRectifier::computeDisparityMap(int blockSize, int maxDisparity, double smoothFactor) {
+    auto blockSearch = BlockSearch(leftRectifiedImage_, rightRectifiedImage_, blockSize, maxDisparity);
+    auto disparityMap_rect = blockSearch.computeDisparityMap(smoothFactor);
+
+    disparityMap = cv::Mat(leftImage_.rows, leftImage_.cols, CV_64F);
+    cv::warpPerspective(disparityMap_rect,
+                        disparityMap,
+                        H_.inv(),
+                        disparityMap.size(),
+                        cv::InterpolationFlags::INTER_NEAREST);
 }
 
 std::pair<vector<cv::Vec3d>, vector<cv::Vec3d>> ImageRectifier::computeEpiLines(
@@ -468,6 +494,10 @@ vector<cv::Point2d> & ImageRectifier::getRectifiedRightMatches(){
 	return rightRectifiedMatches_;
 }
 
+const cv::Mat &ImageRectifier::getDisparityMap() const {
+    return disparityMap;
+}
+
 cv::Mat ImageRectifier::getH_() {
     return H_;
 }
@@ -484,6 +514,17 @@ void ImageRectifier::setMatches(const vector<cv::KeyPoint> &leftKeyPoints,
 		leftMatches_.push_back(leftKeyPoints[match.queryIdx].pt);
 		rightMatches_.push_back(rightKeyPoints[match.queryIdx].pt);
 	}
+}
+
+void ImageRectifier::setMatches(const Matrix3Xf &leftKeyPoints,
+                                const Matrix3Xf &rightKeyPoints) {
+    // convert matrix to vector of Point2d
+    for (int i = 0; i < leftKeyPoints.cols(); i++) {
+        cv::Point2d leftPoint(leftKeyPoints(0,i), leftKeyPoints(1,i));
+        leftMatches_.push_back(leftPoint);
+        cv::Point2d rightPoint(rightKeyPoints(0,i), rightKeyPoints(1,i));
+        rightMatches_.push_back(rightPoint);
+    }
 }
 
 void ImageRectifier::setFundamentalMatrix(const Matrix3f &fundamentalMatrix) {

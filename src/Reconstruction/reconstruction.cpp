@@ -2,6 +2,22 @@
 #include "reconstruction.h"
 
 
+cv::Mat convertDispartiyToDepth(const cv::Mat& dispImage, float focalLength, float baseline){
+    cv::Mat depthValues = cv::Mat(dispImage.rows, dispImage.cols, CV_32FC1);
+    for (int h = 0; h < dispImage.rows; h++) {
+        for (int w = 0; w < dispImage.cols; w++) {
+            if (dispImage.at<float>(h, w) == 0) {
+                // no depth assigned
+                depthValues.at<float>(h, w) = MINF;
+            } else {
+                depthValues.at<float>(h, w) = focalLength * baseline / dispImage.at<float>(h, w);
+            }
+        }
+    }
+    return depthValues;
+}
+
+
 bool CheckTriangularValidity(Vertex* vertices, unsigned int one, unsigned int two, unsigned int three, float threshold) {
     // check if all vertices are valid
     if (vertices[one].position.x() == MINF || vertices[two].position.x() == MINF || vertices[three].position.x() == MINF)

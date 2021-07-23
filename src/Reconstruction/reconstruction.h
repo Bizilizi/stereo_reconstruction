@@ -27,6 +27,6 @@ bool WriteMesh(Vertex* vertices, unsigned int width, unsigned int height, const 
 
 void reconstruction(cv::Mat bgrImage, cv::Mat depthValues, Matrix3f intrinsics, float thrMarchingSquares=1.0f);
 
-bool test_reconstruction();
+cv::Mat convertDispartiyToDepth(const cv::Mat& dispImage, float focalLength, float baseline=1.0f);
 
 #endif //STEREO_RECONSTRUCTION_RECONSTRUCTION_H
