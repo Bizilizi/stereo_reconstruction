@@ -206,8 +206,8 @@ int main(){
                                     F,
                                     good_matches_1,
                                     good_matches_2);
-    rectifier.computeDisparityMap(17, 200, 0.9);
-    cv::Mat disparityImage = rectifier.getDisparityMap();
+    rectifier.computeDisparityMapRight(11, 200, 0.9);
+    cv::Mat disparityImage = rectifier.getDisparityMapRight();
     std::cout << "after computation: avg" << cv::mean(disparityImage) <<  std::endl;
 
     cv::imwrite("../../results/test_result.png", disparityImage);

@@ -47,7 +47,8 @@ public:
 
     const cv::Mat &getRectifiedRight() const;
 
-    const cv::Mat &getDisparityMap() const;
+    const cv::Mat &getDisparityMapLeft() const;
+    const cv::Mat &getDisparityMapRight() const;
 
     vector<cv::Point2d> &getRectifiedLeftMatches();
 
@@ -60,7 +61,8 @@ public:
     /**
      * compute the disparity map of the left image
      */
-    void computeDisparityMap(int blockSize, int maxDisparity, double smoothFactor);
+    void computeDisparityMapLeft(int blockSize, int maxDisparity, double smoothFactor);
+    void computeDisparityMapRight(int blockSize, int maxDisparity, double smoothFactor);
 
     /**
      * Setters
@@ -109,7 +111,8 @@ private:
     vector<cv::Point2d> leftRectifiedMatches_;
     cv::Mat leftRectifiedImage_;
     cv::Mat rightRectifiedImage_;
-    cv::Mat disparityMap;
+    cv::Mat disparityMapLeft;
+    cv::Mat disparityMapRight;
 
     /**
      * Computes and draw epilines from a stereo pair of images.
