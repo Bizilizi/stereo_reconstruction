@@ -65,4 +65,50 @@ std::vector<int> uniqueColumnsInMatrix(const Matrix3Xf &pointMat, float tol) {
     return uniqueIdx;
 }
 
+void evaldisp(cv::Mat disp, cv::Mat gtdisp, cv::Mat mask, float badthresh, float maxdisp, int rounddisp)
+{
+    cv::Size gtShape = gtdisp.size();
+    cv::Size sh = disp.size();
+    cv::Size maskShape = mask.size();
+    assert (gtShape == sh);
+    assert (gtShape == maskShape);
 
+    int n = 0;
+    int bad = 0;
+    int invalid = 0;
+    float serr = 0;
+    for (int y = 0; y < gtShape.height; y++) {
+        for (int x = 0; x < gtShape.width; x++) {
+            float gt = gtdisp.at<float>(y, x);
+            if (gt == INFINITY)                      // unknown
+                continue;
+            float d = disp.at<float>(y, x);
+            bool valid = (d != 0);
+            if (valid)
+                d = std::max(0.0f, std::min(maxdisp, d));
+            if (valid && rounddisp)
+                d = round(d);
+            float err = std::abs(d - gt);
+            if (mask.at<uint8_t>(y, x) != 255) {
+                // do not evaluate
+            } else {
+                n++;
+                if (valid) {
+                    serr += err;
+                    if (err > badthresh)
+                        bad++;
+                } else {
+                    invalid++;
+                }
+            }
+        }
+    }
+
+    float badpercent =  100.0 * bad / n;
+    float invalidpercent =  100.0 * invalid / n;
+    float totalbadpercent =  100.0 * ( bad + invalid ) / n;
+    float avgErr = serr / (n - invalid);
+    std::cout << "number of evaluated: " << n << "\n";
+    printf("valid: %4.1f \nbad percent: %6.2f  \ninvalid percent: %6.2f  \ntotal bad percent: %6.2f \narbErr: %6.2f\n",   100.0*n/(gtShape.width * gtShape.height),
+           badpercent, invalidpercent, totalbadpercent, avgErr);
+}

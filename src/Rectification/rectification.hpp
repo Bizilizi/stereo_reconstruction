@@ -61,8 +61,8 @@ public:
     /**
      * compute the disparity map of the left image
      */
-    void computeDisparityMapLeft(int blockSize, int maxDisparity, double smoothFactor);
-    void computeDisparityMapRight(int blockSize, int maxDisparity, double smoothFactor);
+    void computeDisparityMapLeft(int blockSize, int minDisparity, int maxDisparity, double smoothFactor);
+    void computeDisparityMapRight(int blockSize, int minDisparity, int maxDisparity, double smoothFactor, bool gaussian=false);
 
     /**
      * Setters

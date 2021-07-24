@@ -57,8 +57,8 @@ void ImageRectifier::run() {
 	rectifyImagesAndKeyPoints();
 }
 
-void ImageRectifier::computeDisparityMapLeft(int blockSize, int maxDisparity, double smoothFactor) {
-    auto blockSearch = BlockSearch(leftRectifiedImage_, rightRectifiedImage_, blockSize, maxDisparity);
+void ImageRectifier::computeDisparityMapLeft(int blockSize, int minDisparity, int maxDisparity, double smoothFactor) {
+    auto blockSearch = BlockSearch(leftRectifiedImage_, rightRectifiedImage_, blockSize, minDisparity, maxDisparity);
     auto disparityMap_rect = blockSearch.computeDisparityMapLeft(smoothFactor);
 
     disparityMapLeft = cv::Mat(leftImage_.rows, leftImage_.cols, CV_64F);
@@ -69,8 +69,8 @@ void ImageRectifier::computeDisparityMapLeft(int blockSize, int maxDisparity, do
                         cv::InterpolationFlags::INTER_NEAREST);
 }
 
-void ImageRectifier::computeDisparityMapRight(int blockSize, int maxDisparity, double smoothFactor) {
-    auto blockSearch = BlockSearch(leftRectifiedImage_, rightRectifiedImage_, blockSize, maxDisparity);
+void ImageRectifier::computeDisparityMapRight(int blockSize, int minDisparity,  int maxDisparity, double smoothFactor, bool gaussian) {
+    auto blockSearch = BlockSearch(leftRectifiedImage_, rightRectifiedImage_, blockSize, minDisparity, maxDisparity);
     auto disparityMap_rect = blockSearch.computeDisparityMapRight(smoothFactor);
 
     disparityMapRight = cv::Mat(rightImage_.rows, rightImage_.cols, CV_64F);
