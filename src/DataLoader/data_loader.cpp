@@ -115,12 +115,13 @@ void DataLoader::loadDisparityMatrices(const string &scenarioPath, cv::Mat& disp
 
     // resize cv::Mat (output matrices)
     dispLeft.create(dispRawLeft.Shape().height, dispRawLeft.Shape().width, CV_32FC1);
-    dispRight.create(dispRawLeft.Shape().height, dispRawLeft.Shape().width, CV_32FC1);
+    dispRight.create(dispRawRight.Shape().height, dispRawRight.Shape().width, CV_32FC1);
 
     // copy data (float values, 4 byte)
-    size_t sz = dispLeft.rows * dispLeft.cols * sizeof(float);
-    memcpy(dispLeft.data, dispRawLeft.PixelAddress(0,0,0), sz);
-    memcpy(dispRight.data, dispRawLeft.PixelAddress(0,0,0), sz);
+    size_t szLeft = dispLeft.rows * dispLeft.cols * sizeof(float);
+    memcpy(dispLeft.data, dispRawLeft.PixelAddress(0,0,0), szLeft);
+    size_t szRight = dispRight.rows * dispRight.cols * sizeof(float);
+    memcpy(dispRight.data, dispRawRight.PixelAddress(0,0,0), szRight);
 }
 
 void DataLoader::readCameraMatrices(const std::string &scenarioPath, Matrix3f &cameraLeft, Matrix3f &cameraRight) {
