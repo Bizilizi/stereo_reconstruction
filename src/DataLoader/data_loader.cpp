@@ -174,3 +174,18 @@ cv::Mat DataLoader::loadTestDisparityHitNet(int scenarioIndex) {
 
     return dispLeft;
 }
+
+
+cv::Mat DataLoader::readGrayscaleImageAsDisparityMap(const std::string& disparityPath) {
+    // reading of grayscale image
+    cv::Mat disparityImage8 = cv::imread(disparityPath, cv::IMREAD_GRAYSCALE);
+
+    // conversion of uint8 to float
+    cv::Mat disparityImage = cv::Mat(disparityImage8.rows, disparityImage8.cols, CV_32FC1);
+    for (int i=0; i < disparityImage.rows; i++) {
+        for (int j=0; j < disparityImage.cols; j++) {
+            disparityImage.at<float>(i, j) = (float) disparityImage8.at<uint8_t>(i, j);
+        }
+    }
+    return disparityImage;
+}

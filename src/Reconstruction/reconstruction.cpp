@@ -2,6 +2,32 @@
 #include "reconstruction.h"
 
 
+void removeDisparityOutliers(cv::Mat& disparityMap, int kernelSize, float thrFront, float thrBack) {
+    // compute blurred version of disparity map
+    cv::Mat blurred = cv::Mat(disparityMap.rows, disparityMap.cols, CV_32FC1);
+    cv::blur(disparityMap, blurred, cv::Size(kernelSize, kernelSize));
+
+    // filter out large outliers
+    for (int i=0; i < disparityMap.rows; i++) {
+        for (int j=0; j < disparityMap.cols; j++) {
+            if (disparityMap.at<float>(i, j) > thrFront * blurred.at<float>(i, j) || disparityMap.at<float>(i, j) < thrBack * blurred.at<float>(i, j)) {
+                disparityMap.at<float>(i, j) = blurred.at<float>(i, j);
+            }
+        }
+    }
+}
+
+
+void scaleDisparityMap(cv::Mat& disparityMap, float scalingFactor) {
+    for (int i=0; i < disparityMap.rows; i++) {
+        for (int j=0; j < disparityMap.cols; j++) {
+            disparityMap.at<float>(i, j) = scalingFactor * disparityMap.at<float>(i, j);
+        }
+    }
+}
+
+
+// TODO rename function correctly!!!
 cv::Mat convertDispartiyToDepth(const cv::Mat& dispImage, float focalLength, float baseline){
     cv::Mat depthValues = cv::Mat(dispImage.rows, dispImage.cols, CV_32FC1);
     for (int h = 0; h < dispImage.rows; h++) {

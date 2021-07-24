@@ -29,4 +29,8 @@ void reconstruction(cv::Mat bgrImage, cv::Mat depthValues, Matrix3f intrinsics, 
 
 cv::Mat convertDispartiyToDepth(const cv::Mat& dispImage, float focalLength, float baseline=1.0f);
 
+void scaleDisparityMap(cv::Mat& disparityMap, float scalingFactor);
+
+void removeDisparityOutliers(cv::Mat& disparityMap, int kernelSize=500, float thrFront=1.5, float thrBack=0.8);
+
 #endif //STEREO_RECONSTRUCTION_RECONSTRUCTION_H
