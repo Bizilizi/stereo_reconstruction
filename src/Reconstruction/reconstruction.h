@@ -25,9 +25,9 @@ bool CheckTriangularValidity(Vertex* vertices, unsigned int one, unsigned int tw
 
 bool WriteMesh(Vertex* vertices, unsigned int width, unsigned int height, const std::string& filename, float edgeThreshold);
 
-void reconstruction(cv::Mat bgrImage, cv::Mat depthValues, Matrix3f intrinsics, float thrMarchingSquares=1.0f);
+void reconstruction(cv::Mat bgrImage, cv::Mat depthValues, Matrix3f intrinsics, float thrMesh=1.0f);
 
-cv::Mat convertDispartiyToDepth(const cv::Mat& dispImage, float focalLength, float baseline=1.0f);
+cv::Mat convertDisparityToDepth(const cv::Mat& dispImage, float focalLength, float baseline=1.0f);
 
 void scaleDisparityMap(cv::Mat& disparityMap, float scalingFactor);
 

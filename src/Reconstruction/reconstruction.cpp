@@ -27,8 +27,7 @@ void scaleDisparityMap(cv::Mat& disparityMap, float scalingFactor) {
 }
 
 
-// TODO rename function correctly!!!
-cv::Mat convertDispartiyToDepth(const cv::Mat& dispImage, float focalLength, float baseline){
+cv::Mat convertDisparityToDepth(const cv::Mat& dispImage, float focalLength, float baseline){
     cv::Mat depthValues = cv::Mat(dispImage.rows, dispImage.cols, CV_32FC1);
     for (int h = 0; h < dispImage.rows; h++) {
         for (int w = 0; w < dispImage.cols; w++) {
@@ -150,7 +149,7 @@ bool WriteMesh(Vertex* vertices, unsigned int width, unsigned int height, const 
 }
 
 
-void reconstruction(cv::Mat bgrImage, cv::Mat depthValues, Matrix3f intrinsics, float thrMarchingSquares) {
+void reconstruction(cv::Mat bgrImage, cv::Mat depthValues, Matrix3f intrinsics, float thrMesh) {
     float fX = intrinsics(0, 0);
     float fY = intrinsics(1, 1);
     float cX = intrinsics(0, 2);
@@ -182,7 +181,7 @@ void reconstruction(cv::Mat bgrImage, cv::Mat depthValues, Matrix3f intrinsics, 
                 float x_camera = ((float) w * depth - cX * depth) / fX;
                 float y_camera = ((float) h * depth - cY * depth) / fY;
 
-                // transform to world space
+                // save point as vertex for mesh
                 vertices[idx].position = Vector4f(x_camera, y_camera, depth, 1);
 
                 // assign the color information to vertices assuming the same image size
@@ -199,7 +198,7 @@ void reconstruction(cv::Mat bgrImage, cv::Mat depthValues, Matrix3f intrinsics, 
     // write mesh file
     std::stringstream ss;
     ss << "../../results/reconstruction_mesh.off";
-    if (!WriteMesh(vertices, depthValues.cols, depthValues.rows, ss.str(), thrMarchingSquares))
+    if (!WriteMesh(vertices, depthValues.cols, depthValues.rows, ss.str(), thrMesh))
     {
         std::cout << "Failed to write mesh!\nCheck file path!" << std::endl;
     }

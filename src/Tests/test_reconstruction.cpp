@@ -54,7 +54,7 @@ bool test_reconstruction_02(){
     float focalLength = trainingData.getCameraMatrixRight()(0,0);
     float baseline = 1.f;  // due to normalization (extrinsics translation vector has length 1)
 
-    cv::Mat depthValues = convertDispartiyToDepth(disparityImage, focalLength, baseline);
+    cv::Mat depthValues = convertDisparityToDepth(disparityImage, focalLength, baseline);
     // filter out large outliers naive way
     for (int i=0; i < depthValues.rows; i++) {
         for (int j=0; j < depthValues.cols; j++) {
@@ -92,7 +92,7 @@ bool test_reconstruction_03(){
     float focalLength = trainingData.getCameraMatrixLeft()(0,0);
     float baseline = 1.f;  // due to normalization (extrinsics translation vector has length 1)
 
-    cv::Mat depthValues = convertDispartiyToDepth(disparityImage, focalLength, baseline);
+    cv::Mat depthValues = convertDisparityToDepth(disparityImage, focalLength, baseline);
 
     // intrinsics
     Matrix3f intrinsics = trainingData.getCameraMatrixLeft();
@@ -120,7 +120,7 @@ bool test_reconstruction_04(){
     float focalLength = trainingData.getCameraMatrixRight()(0,0);
     float baseline = 1.f;  // due to normalization (extrinsics translation vector has length 1)
 
-    cv::Mat depthValues = convertDispartiyToDepth(disparityImage, focalLength, baseline);
+    cv::Mat depthValues = convertDisparityToDepth(disparityImage, focalLength, baseline);
 
     // intrinsics
     Matrix3f intrinsics = trainingData.getCameraMatrixRight();

@@ -6,15 +6,21 @@
 #include "Rectification/rectification.hpp"
 #include "Reconstruction/reconstruction.h"
 
+
+#define RUN_ALL 1 // set 0 to only run reconstruction based on pre-computed disparity image
+
+
 enum detector_id {
     ORB,
     BRISK
 };
 
+
 enum descriptor_id {
     BRUTE_FORCE,
     FLANN_BASE
 };
+
 
 cv::Mat detectFeatures(cv::Mat image,
                        enum detector_id det_id,
@@ -54,6 +60,7 @@ cv::Mat detectFeatures(cv::Mat image,
 
     return descriptors;
 }
+
 
 std::pair<vector<cv::Point2d>, vector<cv::Point2d> > match(cv::Mat &one,
                                                            cv::Mat &other,
@@ -104,6 +111,7 @@ std::pair<vector<cv::Point2d>, vector<cv::Point2d> > match(cv::Mat &one,
             ordered_keypoints[1]);
 }
 
+
 cv::Mat fundamentalMat(cv::Mat &one, cv::Mat &other,
                        vector<cv::Point2d> &good_matches_1,
                        vector<cv::Point2d> &good_matches_2) {
@@ -147,13 +155,15 @@ cv::Mat fundamentalMat(cv::Mat &one, cv::Mat &other,
     return F;
 }
 
+
 int main(){
     DataLoader dataLoader = DataLoader();
 
     // select scenarios by index (alphabetic position starting with 0)
-    int scenarioIdx = 13;
+    int scenarioIdx = 3;
     Data data = dataLoader.loadTrainingScenario(scenarioIdx);
 
+#if RUN_ALL
     /**
      * 1. Estimate Extrinsics (Fundamental Matrix)
      */
@@ -173,26 +183,31 @@ int main(){
     auto rectifier = ImageRectifier(img_left, img_right, fundamentalMatrix, estimatedPose.keypointsLeft, estimatedPose.keypointsRight);
 
     rectifier.computeDisparityMapRight(17, 200, 0.9);
-    cv::Mat disparityImage = rectifier.getDisparityMapRight();
+    cv::Mat disparityImageWrite = rectifier.getDisparityMapRight();
 
-    cv::imwrite("../../results/disparity_map.png", disparityImage);
+    std::string disparityPath = "../../results/disparity_map.png";
+    cv::imwrite(disparityPath, disparityImageWrite);
+#endif
 
     /**
      * 3. Reconstruct scene
      */
 
-    /*
-    float focalLength = data.getCameraMatrixLeft()(0,0);
-    float baseline = 1.f;  // due to normalization (extrinsics translation vector has length 1)
+    cv::Mat disparityImage = DataLoader::readGrayscaleImageAsDisparityMap(disparityPath);
 
-    cv::Mat depthValues = convertDispartiyToDepth(disparityImage, focalLength, baseline);
+    // remove outliers
+    removeDisparityOutliers(disparityImage, 500, 1.5, 0.8);
+
+    // create depth map
+    float focalLength = data.getCameraMatrixRight()(0,0);
+    float baseline = 1.f;  // due to normalization (extrinsics translation vector has length 1)
+    cv::Mat depthValues = convertDisparityToDepth(disparityImage, focalLength, baseline);
 
     // intrinsics
-    Matrix3f intrinsics = data.getCameraMatrixLeft();
+    Matrix3f intrinsics = data.getCameraMatrixRight();
 
-    float thrMarchingSquares = 1.f;
-    reconstruction(data.getImageLeft(), depthValues, intrinsics, thrMarchingSquares);
-
-     */
+    // reconstruct geometry and compute triangular mesh
+    float thrMesh = 1.f;
+    reconstruction(data.getImageRight(), depthValues, intrinsics, thrMesh);
 }
 
