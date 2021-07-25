@@ -12,7 +12,6 @@
 #include "WindowSearch/LinearSearch.h"
 #include "WindowSearch/BlockSearch.h"
 #include "DataLoader/data_loader.h"
-#include "evalDisp.h"
 
 enum detector_id {
   ORB,
@@ -192,29 +191,12 @@ int main(int argc, char **argv) {
 	cv::imwrite("../../results/rectifiedRight.png",
 				rightRectified);
 
-	auto blockSearch = BlockSearch(leftRectified, rightRectified, 17, 100);
-	auto dispMap = blockSearch.computeDisparityMapRight(0.8);
-	cv::imwrite("../../results/disparity_Teddy.png", dispMap);
-//    std::cout << dispMap << "\n";
+    auto blockSearch = LinearSearch(leftRectified, rightRectified);
+    auto dispMap = blockSearch.computeDisparityMap(1.0);
+    cv::imwrite("../../results/disparity_Teddy.png", dispMap);
 
 
-	auto H_ = rectifier.getH_();
-	auto revertImg = cv::Mat(imageLeft.rows, imageLeft.cols, CV_64F);
-	cv::warpPerspective(dispMap,
-						revertImg,
-						H_.inv(),
-						revertImg.size(),
-						cv::InterpolationFlags::INTER_NEAREST);
-	cv::imwrite("../../results/revertTeddyDisp.png", revertImg);
-	//std::cout << revertImg << "\n";
-
-	// Evaluate disparity
-	auto gtDisp = trainingData.getDisparityLeft();
-//	std::cout << gtDisp << "\n";
-	auto mask = trainingData.getMaskNonOccludedLeft();
-	evaldisp(revertImg, gtDisp, mask, 40, 1000, 1);
-
-	auto F_r = fundamentalMat(leftRectified,
+    auto F_r = fundamentalMat(leftRectified,
 							  rightRectified,
 							  rectifier.getRectifiedLeftMatches(),
 							  rectifier.getRectifiedRightMatches());
@@ -224,7 +206,7 @@ int main(int argc, char **argv) {
 										  F_r,
 										  rectifier.getRectifiedLeftMatches(),
 										  rectifier.getRectifiedRightMatches(),
-										  150);
+										  6);
 
 	cv::imwrite("../../results/rectifiedLeftEpilines.png",
 				leftRectified);

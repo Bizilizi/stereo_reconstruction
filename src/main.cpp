@@ -5,6 +5,7 @@
 #include "DataLoader/data_loader.h"
 #include "Rectification/rectification.hpp"
 #include "Reconstruction/reconstruction.h"
+#include "utils.h"
 
 
 #define RUN_ALL 1 // set 0 to only run reconstruction based on pre-computed disparity image
@@ -192,6 +193,7 @@ int main(){
     /**
      * 3. Reconstruct scene
      */
+    float focalLength = data.getCameraMatrixRight()(0,0);
 
     cv::Mat disparityImage = DataLoader::readGrayscaleImageAsDisparityMap(disparityPath);
 

@@ -122,6 +122,7 @@ void DataLoader::loadDisparityMatrices(const string &scenarioPath, cv::Mat& disp
     memcpy(dispLeft.data, dispRawLeft.PixelAddress(0,0,0), szLeft);
     size_t szRight = dispRight.rows * dispRight.cols * sizeof(float);
     memcpy(dispRight.data, dispRawRight.PixelAddress(0,0,0), szRight);
+
 }
 
 void DataLoader::readCameraMatrices(const std::string &scenarioPath, Matrix3f &cameraLeft, Matrix3f &cameraRight) {

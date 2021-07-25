@@ -48,6 +48,17 @@ void transformMatchedKeypointsToEigen(const std::vector<cv::KeyPoint> &keypoints
 std::vector<int> uniqueColumnsInMatrix(const Matrix3Xf &pointMat, float tol=0.1f);
 
 /**
+ * Note: adopt from Middlebury SDK
+ * @param disp: compute disparity map
+ * @param gtdisp: ground truth disparity map
+ * @param mask
+ * @param badthresh
+ * @param maxdisp
+ * @param rounddisp
+ */
+void evaldisp(cv::Mat disp, cv::Mat gtdisp, cv::Mat mask, float badthresh, float maxdisp, int rounddisp);
+
+/**
  * Computes the reprojection error.
  * @param matchesLeft
  * @param matchesRight
