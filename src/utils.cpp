@@ -75,4 +75,28 @@ std::vector<int> uniqueColumnsInMatrix(const Matrix3Xf &pointMat, float tol) {
     return uniqueIdx;
 }
 
+float averageReconstructionError(const Matrix3Xf& matchesLeft, const Matrix3Xf& matchesRight,
+                                 const Matrix3f& intrinsicsLeft, const Matrix3f& intrinsicsRight,
+                                 const Matrix3f& rotation, const Vector3f& translation,
+                                 const Matrix3Xf& reconstructedPointsLeft){
+    int nPoints = (int) reconstructedPointsLeft.cols();
+
+    // projection error left picture
+    Matrix3Xf projectedPointsLeft;
+    projectedPointsLeft = (intrinsicsLeft * reconstructedPointsLeft).cwiseQuotient(reconstructedPointsLeft.row(2).replicate(3,1));
+
+    VectorXf errorsLeft;
+    errorsLeft = (projectedPointsLeft - matchesLeft).colwise().squaredNorm();
+    std::cout << "Error left: " << errorsLeft.sum() / (float) nPoints << std::endl;
+
+    // projection error right picture
+    Matrix3Xf translatedPoints, projectedPointsRight;
+    translatedPoints = rotation * reconstructedPointsLeft + translation.replicate(1, nPoints);
+    projectedPointsRight = (intrinsicsRight * translatedPoints).cwiseQuotient(translatedPoints.row(2).replicate(3,1));
+    VectorXf errorsRight = (projectedPointsRight - matchesRight).colwise().squaredNorm();
+    std::cout << "Errors right: " << errorsRight.sum() / (float) nPoints << std::endl;
+
+    return (errorsLeft.sum() + errorsRight.sum()) / (2.f * nPoints);
+}
+
 

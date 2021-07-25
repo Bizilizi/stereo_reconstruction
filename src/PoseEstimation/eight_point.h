@@ -52,8 +52,6 @@ public:
 
     void setCameraLeft(const Matrix3f &camera);
 
-
-private:
     /**
      * Reconstructs depth of corresponding 2D points in two views by triangulation.
      * @param R (3, 3) Rotation matrix
@@ -61,6 +59,10 @@ private:
      * @return success boolean indicating whether all depths are positive (otherwise reconstruction failed)
      */
     bool structureReconstruction(const Matrix3f &R, const Vector3f &T);
+
+    VectorXf estimateDepth(const Matrix3f &R, const Vector3f &T) const;
+
+private:
 
     /**
      * Projects matches into 3D by applying inverse intrinsics.

@@ -1,6 +1,7 @@
 
 #include "PoseEstimation/keypoints.h"
 #include "PoseEstimation/bundle_adjustment.h"
+#include "PoseEstimation/pose_estimation.h"
 #include "DataLoader/data_loader.h"
 #include "Rectification/rectification.hpp"
 #include "Reconstruction/reconstruction.h"
@@ -157,61 +158,30 @@ int main(){
      * 1. Estimate Extrinsics (Fundamental Matrix)
      */
 
-    // find keypoints
-    std::vector<cv::KeyPoint> keypointsLeft, keypointsRight;
-    cv::Mat featuresLeft, featuresRight;
+    // select scenarios by index (alphabetic position starting with 0)
+    poseStruct estimatedPose = runFullPoseEstimation(data.getImageLeft(), data.getImageRight(), data.getCameraMatrixLeft(), data.getCameraMatrixRight(), true, true);
+    Matrix3f fundamentalMatrix = estimatedPose.fundamentalMatrix;
 
-    SIFTKeypointDetection(data.getImageLeft(), keypointsLeft, featuresLeft);
-    SIFTKeypointDetection(data.getImageRight(), keypointsRight, featuresRight);
-
-    // find correspondences
-    std::vector<cv::DMatch> matches;
-    featureMatching(featuresLeft, featuresRight, matches);
-
-    // estimate pose using the eight point algorithm
-    Matrix3Xf kpLeftMat, kpRightMat;
-    transformMatchedKeypointsToEigen(keypointsLeft, keypointsRight, matches, kpLeftMat, kpRightMat);
-
-    EightPointAlgorithm ep = RANSAC(kpLeftMat, kpRightMat, data.getCameraMatrixLeft(),
-                                    data.getCameraMatrixRight());
-    ep.run();
-
-    Matrix4f pose = ep.getPose();
-    auto optimizer = BundleAdjustmentOptimizer(ep.getMatchesLeft(), ep.getMatchesRight(), data.getCameraMatrixLeft(),
-                                               data.getCameraMatrixRight(), pose(seqN(0, 3), seqN(0, 3)),
-                                               pose(seqN(0, 3), 3), ep.getPointsLeftReconstructed());
-    optimizer.estimatePose();
-    Matrix3f fundamentalMatrix = optimizer.getFundamentalMatrix();
-
-    std::cout << "Fundamental matrix: " << std::endl << fundamentalMatrix << std::endl;
+    std::cout << "Fundamental matrix (ours): " << std::endl << fundamentalMatrix / fundamentalMatrix.norm() << std::endl;
 
     /**
      * 2. Compute Disparity Map
      */
 
-    cv::Mat disparityImage1 =  dataLoader.loadTrainingDisparityHitNet(scenarioIdx);
-    std::cout <<  "Mean hitmap" << cv::mean(disparityImage1) << std::endl;
-
-    std::cout << "before computation" << std::endl;
-    vector<cv::Point2d> good_matches_1, good_matches_2;
     auto img_left = data.getImageLeft();
     auto img_right = data.getImageRight();
-    auto F = fundamentalMat(img_left, img_right, good_matches_1, good_matches_2);
+    auto rectifier = ImageRectifier(img_left, img_right, fundamentalMatrix, estimatedPose.keypointsLeft, estimatedPose.keypointsRight);
 
-    auto rectifier = ImageRectifier(data.getImageLeft(),
-                                    data.getImageRight(),
-                                    F,
-                                    good_matches_1,
-                                    good_matches_2);
-    rectifier.computeDisparityMapRight(11, 200, 0.9);
+    rectifier.computeDisparityMapRight(17, 200, 0.9);
     cv::Mat disparityImage = rectifier.getDisparityMapRight();
-    std::cout << "after computation: avg" << cv::mean(disparityImage) <<  std::endl;
 
-    cv::imwrite("../../results/test_result.png", disparityImage);
+    cv::imwrite("../../results/disparity_map.png", disparityImage);
 
     /**
      * 3. Reconstruct scene
      */
+
+    /*
     float focalLength = data.getCameraMatrixLeft()(0,0);
     float baseline = 1.f;  // due to normalization (extrinsics translation vector has length 1)
 
@@ -222,5 +192,7 @@ int main(){
 
     float thrMarchingSquares = 1.f;
     reconstruction(data.getImageLeft(), depthValues, intrinsics, thrMarchingSquares);
+
+     */
 }
 

@@ -99,6 +99,25 @@ void EightPointAlgorithm::run() {
 }
 
 bool EightPointAlgorithm::structureReconstruction(const Matrix3f &R, const Vector3f &T) {
+    // estimate depth
+    VectorXf depthVec = estimateDepth(R, T);
+    // reconstruct points
+    MatrixXf tmpPointsLeftReconstructed = MatrixXf::Zero(3, numMatches);
+    MatrixXf tmpPointsRightReconstructed = MatrixXf::Zero(3, numMatches);
+    tmpPointsLeftReconstructed = pointsLeft.cwiseProduct(depthVec.transpose().replicate(3, 1));
+    tmpPointsRightReconstructed = (R * tmpPointsLeftReconstructed) + T.replicate(1, numMatches);
+
+    // check depth of all reconstructed points
+    bool success =
+            (tmpPointsLeftReconstructed.row(2).array() >= 0).all() && (tmpPointsRightReconstructed.row(2).array() >= 0).all();
+    if (success) {
+        pointsLeftReconstructed = tmpPointsLeftReconstructed;
+        pointsRightReconstructed = tmpPointsRightReconstructed;
+    }
+    return success;
+}
+
+VectorXf EightPointAlgorithm::estimateDepth(const Matrix3f &R, const Vector3f &T) const{
     MatrixXf M = MatrixXf::Zero(3 * numMatches, numMatches + 1);
 
     // fill M matrix
@@ -124,19 +143,7 @@ bool EightPointAlgorithm::structureReconstruction(const Matrix3f &R, const Vecto
     // reconstruct depth
     float scale = V(last);
     VectorXf depthVec = V(seq(0, last - 1)) / scale; // make scale similar to scale of translation
-    MatrixXf tmpPointsLeftReconstructed = MatrixXf::Zero(3, numMatches);
-    MatrixXf tmpPointsRightReconstructed = MatrixXf::Zero(3, numMatches);
-    tmpPointsLeftReconstructed = pointsLeft.cwiseProduct(depthVec.transpose().replicate(3, 1));
-    tmpPointsRightReconstructed = (R * tmpPointsLeftReconstructed) + T.replicate(1, numMatches);
-
-    // check depth of all reconstructed points
-    bool success =
-            (tmpPointsLeftReconstructed.row(2).array() >= 0).all() && (tmpPointsRightReconstructed.row(2).array() >= 0).all();
-    if (success) {
-        pointsLeftReconstructed = tmpPointsLeftReconstructed;
-        pointsRightReconstructed = tmpPointsRightReconstructed;
-    }
-    return success;
+    return depthVec;
 }
 
 void EightPointAlgorithm::updateData() {
@@ -167,19 +174,16 @@ void EightPointAlgorithm::setMatches(const Matrix3Xf &leftMatches, const Matrix3
         throw std::runtime_error("Inputs matrices have to contain same amount of points");
     }
 
-    std::cout << leftMatches << std::endl;
-    std::cout << rightMatches << std::endl;
     std::vector<int> uniqueIdx = uniqueColumnsInMatrix(leftMatches);
     matchesLeft = leftMatches(all, uniqueIdx);
     matchesRight = rightMatches(all, uniqueIdx);
-
-    std::cout << matchesLeft << std::endl;
-    std::cout << matchesRight << std::endl;
 
     numMatches = (int) matchesLeft.cols();
     if (numMatches < 8) {
         throw std::runtime_error("Less than 8 input point pairs detected for processing the Eight Point Algorithm!");
     }
+
+    updateData();
 }
 
 void EightPointAlgorithm::setCameraRight(const Matrix3f &camera) {
@@ -252,7 +256,7 @@ RANSAC(const MatrixXf &kpLeftMat, const MatrixXf &kpRightMat, const Matrix3f &ca
     int maxIter = 100;
     int numPoints = N_KEYPOINTS_8PT;
     int numPointsShuffle = 1;
-    float errorThreshold = 3.;
+    float errorThreshold = 4.;
 
     int numMatches = (int) kpLeftMat.cols();
 
@@ -318,6 +322,7 @@ RANSAC(const MatrixXf &kpLeftMat, const MatrixXf &kpRightMat, const Matrix3f &ca
                                      randomIndices.end());
             continue;
         }
+        bestIndices = randomIndices;
 
         // compute projection of left image keypoints to the right one
         Matrix3Xf rightPoints3D = ep.getPointsRightReconstructed();

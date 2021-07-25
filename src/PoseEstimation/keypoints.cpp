@@ -8,8 +8,6 @@
 
 #include "keypoints.h"
 
-#define N_KEYPOINTS_SIFT 250
-
 
 void featureMatching(const cv::Mat &featuresLeft, const cv::Mat &featuresRight, std::vector<cv::DMatch> &outputMatches,
                      float ratio_thresh) {

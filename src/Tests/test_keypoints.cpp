@@ -1,8 +1,8 @@
 
+#include "../PoseEstimation/pose_estimation.h"
 #include "../PoseEstimation/keypoints.h"
-#include "../PoseEstimation/bundle_adjustment.h"
 #include "../DataLoader/data_loader.h"
-#include "../utils.h"
+#include "../Eigen.h"
 
 
 void testVisualizationExtrinsics() {
@@ -58,10 +58,14 @@ void testCaseExtrinsics() {
 
 
 int main() {
+
     DataLoader dataLoader = DataLoader();
 
     // select scenarios by index (alphabetic position starting with 0)
-    Data data = dataLoader.loadTrainingScenario(3);
+    Data data = dataLoader.loadTrainingScenario(9);
+    runFullPoseEstimation(data.getImageLeft(), data.getImageRight(), data.getCameraMatrixLeft(), data.getCameraMatrixRight(), true, true);
+
+#if 0
 
     // find keypoints
     std::vector<cv::KeyPoint> keypointsLeft, keypointsRight;
@@ -90,18 +94,12 @@ int main() {
 
     // estimate pose using the eight point algorithm
     Matrix3Xf kpLeftMat, kpRightMat;
-    keypointsLeft.resize(20);
-    keypointsRight.resize(20);
-    matches.resize(20);
 
     transformMatchedKeypointsToEigen(keypointsLeft, keypointsRight, matches, kpLeftMat, kpRightMat, true);
-    std::cout << kpLeftMat << std::endl;
+    std::cout << "Number matches: " << kpLeftMat.cols() << std::endl;
     std::cout << kpRightMat << std::endl;
 
-    // TODO: Embed RANSAC to Eight-point class instead of using dirty solution
-    // EightPointAlgorithm dirtyFix(kpLeftMat, kpRightMat, data.getCameraMatrixLeft(), data.getCameraMatrixRight());
-
-    EightPointAlgorithm ep = RANSAC(kpLeftMat,  kpRightMat, data.getCameraMatrixLeft(),
+    EightPointAlgorithm ep = RANSAC(kpLeftMat, kpRightMat, data.getCameraMatrixLeft(),
                                     data.getCameraMatrixRight());
     ep.run();
 
@@ -115,10 +113,23 @@ int main() {
     std::cout << ep.getMatchesRight() << std::endl;
     std::cout << leftToRightProjection << std::endl;
 
+    for (int i = 0; i < rightPoints3D.cols(); i++) {
+        cv::circle(data.getImageRight(), cv::Point(leftToRightProjection(0, i), leftToRightProjection(1, i)), 5.0,
+                   cv::Scalar(255, 0, 0), 4);
+        cv::circle(data.getImageRight(), cv::Point(ep.getMatchesRight()(0, i), ep.getMatchesRight()(1, i)), 5.0,
+                   cv::Scalar(0, 255, 0), 4);
+        //cv::circle(data.getImageRight(), cv::Point(ep.getMatchesLeft()(0,i), ep.getMatchesLeft()(1,i)), 5.0, cv::Scalar(0, 255, 255), 4);
+    }
+
+    cv::imwrite("../../results/image_after8pt.png", data.getImageRight());
+
+#endif
+
     // ---------------------------------------------------------
     // Bundle Adjustment
     // ---------------------------------------------------------
 
+#if 0
     std::cout << "BUNDLE ADJUSTMENT" << std::endl;
     Matrix4f pose = ep.getPose();
     auto optimizer = BundleAdjustmentOptimizer(ep.getMatchesLeft(), ep.getMatchesRight(), data.getCameraMatrixLeft(),
@@ -181,6 +192,8 @@ int main() {
     std::cout << F << std::endl;
 
     return 0;
+
+#endif
 }
 
 

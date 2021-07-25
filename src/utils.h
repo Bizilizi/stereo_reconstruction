@@ -47,4 +47,20 @@ void transformMatchedKeypointsToEigen(const std::vector<cv::KeyPoint> &keypoints
  */
 std::vector<int> uniqueColumnsInMatrix(const Matrix3Xf &pointMat, float tol=0.1f);
 
+/**
+ * Computes the reprojection error.
+ * @param matchesLeft
+ * @param matchesRight
+ * @param intrinsicsLeft
+ * @param intrinsicsRight
+ * @param rotation
+ * @param translation
+ * @param reconstructedPointsLeft
+ * @return error
+ */
+float averageReconstructionError(const Matrix3Xf& matchesLeft, const Matrix3Xf& matchesRight,
+                                 const Matrix3f& intrinsicsLeft, const Matrix3f& intrinsicsRight,
+                                 const Matrix3f& rotation, const Vector3f& translation,
+                                 const Matrix3Xf& reconstructedPointsLeft);
+
 #endif //STEREO_RECONSTRUCTION_UTILS_H

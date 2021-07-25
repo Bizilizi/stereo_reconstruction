@@ -4,30 +4,7 @@
 
 #include "../Eigen.h"
 #include "../PoseEstimation/bundle_adjustment.h"
-
-float averageReconstructionError(const Matrix3Xf& matchesLeft, const Matrix3Xf& matchesRight,
-                                 const Matrix3f& intrinsicsLeft, const Matrix3f& intrinsicsRight,
-                                 const Matrix3f& rotation, const Vector3f& translation,
-                                 const Matrix3Xf& reconstructedPointsLeft){
-    int nPoints = (int) reconstructedPointsLeft.cols();
-
-    // projection error left picture
-    Matrix3Xf projectedPointsLeft;
-    projectedPointsLeft = (intrinsicsLeft * reconstructedPointsLeft).cwiseQuotient(reconstructedPointsLeft.row(2).replicate(3,1));
-
-    VectorXf errorsLeft;
-    errorsLeft = (projectedPointsLeft - matchesLeft).colwise().norm() / (float) nPoints;
-    std::cout << "Error left: " << errorsLeft.sum() << std::endl;
-
-    // projection error right picture
-    Matrix3Xf translatedPoints, projectedPointsRight;
-    translatedPoints = rotation * reconstructedPointsLeft + translation.replicate(1, nPoints);
-    projectedPointsRight = (intrinsicsRight * translatedPoints).cwiseQuotient(translatedPoints.row(2).replicate(3,1));
-    VectorXf errorsRight = (projectedPointsRight - matchesRight).colwise().norm();
-    std::cout << "Errors right: " << errorsRight.sum() / (float) nPoints << std::endl;
-
-    return (errorsLeft.sum() + errorsRight.sum()) / (float) nPoints;
-}
+#include "../utils.h"
 
 void testCase01() {
     /**
@@ -93,8 +70,3 @@ int main(int argc, char **argv) {
     testCase01();
     return 0;
 }
-
-/**
-* TODO: How to test that optimization works for 3D points as well?
- * (> e.g. add noise not only to depth vector(has no influence) but instead to all x,y,z?)
-*/
