@@ -30,12 +30,14 @@ VectorXf kron(const VectorXf &vec1, const VectorXf &vec2);
  * @param matches cv::DMatch instance that contains the indices of matched keypoints
  * @param outLeft output matrix for keypoints in left picture
  * @param outRight output matrix for keypoints in right picture
+ * @param filterDuplicates filters out duplicates in matches
  */
 void transformMatchedKeypointsToEigen(const std::vector<cv::KeyPoint> &keypointsLeft,
                                       const std::vector<cv::KeyPoint> &keypointsRight,
                                       const std::vector<cv::DMatch> &matches,
                                       Matrix3Xf &outLeft,
-                                      Matrix3Xf &outRight);
+                                      Matrix3Xf &outRight,
+                                      bool filterDuplicates = true);
 
 /**
  * Returns the column indices corresponding to unique elements.
@@ -55,5 +57,21 @@ std::vector<int> uniqueColumnsInMatrix(const Matrix3Xf &pointMat, float tol=0.1f
  * @param rounddisp
  */
 void evaldisp(cv::Mat disp, cv::Mat gtdisp, cv::Mat mask, float badthresh, float maxdisp, int rounddisp);
+
+/**
+ * Computes the reprojection error.
+ * @param matchesLeft
+ * @param matchesRight
+ * @param intrinsicsLeft
+ * @param intrinsicsRight
+ * @param rotation
+ * @param translation
+ * @param reconstructedPointsLeft
+ * @return error
+ */
+float averageReconstructionError(const Matrix3Xf& matchesLeft, const Matrix3Xf& matchesRight,
+                                 const Matrix3f& intrinsicsLeft, const Matrix3f& intrinsicsRight,
+                                 const Matrix3f& rotation, const Vector3f& translation,
+                                 const Matrix3Xf& reconstructedPointsLeft);
 
 #endif //STEREO_RECONSTRUCTION_UTILS_H

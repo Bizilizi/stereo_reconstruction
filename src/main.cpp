@@ -1,6 +1,7 @@
 
 #include "PoseEstimation/keypoints.h"
 #include "PoseEstimation/bundle_adjustment.h"
+#include "PoseEstimation/pose_estimation.h"
 #include "DataLoader/data_loader.h"
 #include "Rectification/rectification.hpp"
 #include "Reconstruction/reconstruction.h"
@@ -158,48 +159,20 @@ int main(){
      * 1. Estimate Extrinsics (Fundamental Matrix)
      */
 
-#if 0
-    // find keypoints
-    std::vector<cv::KeyPoint> keypointsLeft, keypointsRight;
-    cv::Mat featuresLeft, featuresRight;
+    // select scenarios by index (alphabetic position starting with 0)
+    poseStruct estimatedPose = runFullPoseEstimation(data.getImageLeft(), data.getImageRight(), data.getCameraMatrixLeft(), data.getCameraMatrixRight(), true, true);
+    Matrix3f fundamentalMatrix = estimatedPose.fundamentalMatrix;
 
-    SIFTKeypointDetection(data.getImageLeft(), keypointsLeft, featuresLeft);
-    SIFTKeypointDetection(data.getImageRight(), keypointsRight, featuresRight);
+    std::cout << "Fundamental matrix (ours): " << std::endl << fundamentalMatrix / fundamentalMatrix.norm() << std::endl;
 
-    // find correspondences
-    std::vector<cv::DMatch> matches;
-    featureMatching(featuresLeft, featuresRight, matches);
-
-    // estimate pose using the eight point algorithm
-    Matrix3Xf kpLeftMat, kpRightMat;
-    transformMatchedKeypointsToEigen(keypointsLeft, keypointsRight, matches, kpLeftMat, kpRightMat);
-
-    // TODO: Embed RANSAC to Eight-point class instead of using dirty solution
-    EightPointAlgorithm dirtyFix(kpLeftMat, kpRightMat, data.getCameraMatrixLeft(), data.getCameraMatrixRight());
-
-    EightPointAlgorithm ep = RANSAC(dirtyFix.getMatchesLeft(), dirtyFix.getMatchesRight(), data.getCameraMatrixLeft(),
-                                    data.getCameraMatrixRight());
-    ep.run();
-
-    Matrix4f pose = ep.getPose();
-    auto optimizer = BundleAdjustmentOptimizer(ep.getMatchesLeft(), ep.getMatchesRight(), data.getCameraMatrixLeft(),
-                                               data.getCameraMatrixRight(), pose(seqN(0, 3), seqN(0, 3)),
-                                               pose(seqN(0, 3), 3), ep.getPointsLeftReconstructed());
-    Matrix3f fundamentalMatrix = optimizer.getFundamentalMatrix();
-
-    std::cout << "Fundamental matrix: " << std::endl << fundamentalMatrix << std::endl;
-#endif
     /**
      * 2. Compute Disparity Map
      */
 
-    cv::Mat disparityImage1 =  dataLoader.loadTrainingDisparityHitNet(scenarioIdx);
-    std::cout <<  "Mean hitmap" << cv::mean(disparityImage1) << std::endl;
-
-    std::cout << "before computation" << std::endl;
-    vector<cv::Point2d> good_matches_1, good_matches_2;
     auto img_left = data.getImageLeft();
     auto img_right = data.getImageRight();
+    std::vector<cv::Point2d> good_matches_1;
+    std::vector<cv::Point2d> good_matches_2;
     auto F = fundamentalMat(img_left, img_right, good_matches_1, good_matches_2);
 
     auto rectifier = ImageRectifier(data.getImageLeft(),
@@ -207,12 +180,12 @@ int main(){
                                     F,
                                     good_matches_1,
                                     good_matches_2);
-    rectifier.computeDisparityMapRight(11, 0,200, 1.0, false, 100);
+    rectifier.computeDisparityMapRight(17, 0, 200, 1.0, false, 100);
     cv::Mat disparityImage = rectifier.getDisparityMapRight();
 
-    //std::cout << "after computation: avg" << cv::mean(disparityImage) <<  std::endl;
-    //std::cout << disparityImage << "\n";
-    cv::imwrite("../../results/test_result.png", disparityImage);
+    cv::imwrite("../../results/disparity.png", disparityImage);
+    cv::imwrite("../../results/rectifiedLeft.png", rectifier.getRectifiedLeft());
+    cv::imwrite("../../results/rectifiedRight.png", rectifier.getRectifiedRight());
 
     auto gt_disparity = data.getDisparityRight();
     auto mask = data.getMaskNonOccludedRight();
@@ -220,12 +193,14 @@ int main(){
     //std::cout << gt_disparity << "\n";
 
     // evaluate disparity map
-    evaldisp(disparityImage, gt_disparity, mask, 10, 200, 0);
+    //evaldisp(disparityImage, gt_disparity, mask, 10, 200, 0);
 
     /**
      * 3. Reconstruct scene
      */
     float focalLength = data.getCameraMatrixRight()(0,0);
+
+    /*
     float baseline = 1.f;  // due to normalization (extrinsics translation vector has length 1)
 
     cv::Mat depthValues = convertDispartiyToDepth(disparityImage, focalLength, baseline);
@@ -235,5 +210,6 @@ int main(){
 
     float thrMarchingSquares = 1.f;
     reconstruction(data.getImageRight(), depthValues, intrinsics, thrMarchingSquares);
+     */
 }
 

@@ -33,7 +33,8 @@ void transformMatchedKeypointsToEigen(const std::vector<cv::KeyPoint> &keypoints
                                       const std::vector<cv::KeyPoint> &keypointsRight,
                                       const std::vector<cv::DMatch> &matches,
                                       Matrix3Xf &outLeft,
-                                      Matrix3Xf &outRight) {
+                                      Matrix3Xf &outRight,
+                                      bool filterDuplicates) {
     outLeft = Matrix3Xf::Zero(3, matches.size());
     outRight = Matrix3Xf::Zero(3, matches.size());
 
@@ -42,6 +43,15 @@ void transformMatchedKeypointsToEigen(const std::vector<cv::KeyPoint> &keypoints
         outLeft.col(i) = Vector3f(keypointsLeft[match.queryIdx].pt.x, keypointsLeft[match.queryIdx].pt.y, 1);
         outRight.col(i) = Vector3f(keypointsRight[match.trainIdx].pt.x, keypointsRight[match.trainIdx].pt.y, 1);
         i++;
+    }
+
+    if (filterDuplicates) {
+        std::vector<int> uniqueIdx = uniqueColumnsInMatrix(outLeft);
+        Matrix3Xf tmp = Matrix3Xf::Zero(3, uniqueIdx.size());
+        tmp = outLeft(all, uniqueIdx);
+        outLeft = tmp;
+        tmp = outRight(all, uniqueIdx);
+        outRight = tmp;
     }
 }
 
@@ -65,6 +75,30 @@ std::vector<int> uniqueColumnsInMatrix(const Matrix3Xf &pointMat, float tol) {
     return uniqueIdx;
 }
 
+float averageReconstructionError(const Matrix3Xf& matchesLeft, const Matrix3Xf& matchesRight,
+                                 const Matrix3f& intrinsicsLeft, const Matrix3f& intrinsicsRight,
+                                 const Matrix3f& rotation, const Vector3f& translation,
+                                 const Matrix3Xf& reconstructedPointsLeft){
+    int nPoints = (int) reconstructedPointsLeft.cols();
+
+    // projection error left picture
+    Matrix3Xf projectedPointsLeft;
+    projectedPointsLeft = (intrinsicsLeft * reconstructedPointsLeft).cwiseQuotient(reconstructedPointsLeft.row(2).replicate(3,1));
+
+    VectorXf errorsLeft;
+    errorsLeft = (projectedPointsLeft - matchesLeft).colwise().squaredNorm();
+    std::cout << "Error left: " << errorsLeft.sum() / (float) nPoints << std::endl;
+
+    // projection error right picture
+    Matrix3Xf translatedPoints, projectedPointsRight;
+    translatedPoints = rotation * reconstructedPointsLeft + translation.replicate(1, nPoints);
+    projectedPointsRight = (intrinsicsRight * translatedPoints).cwiseQuotient(translatedPoints.row(2).replicate(3,1));
+    VectorXf errorsRight = (projectedPointsRight - matchesRight).colwise().squaredNorm();
+    std::cout << "Errors right: " << errorsRight.sum() / (float) nPoints << std::endl;
+
+    return (errorsLeft.sum() + errorsRight.sum()) / (2.f * nPoints);
+}
+
 void evaldisp(cv::Mat disp, cv::Mat gtdisp, cv::Mat mask, float badthresh, float maxdisp, int rounddisp)
 {
     cv::Size gtShape = gtdisp.size();
@@ -72,7 +106,6 @@ void evaldisp(cv::Mat disp, cv::Mat gtdisp, cv::Mat mask, float badthresh, float
     cv::Size maskShape = mask.size();
     assert (gtShape == sh);
     assert (gtShape == maskShape);
-
     int n = 0;
     int bad = 0;
     int invalid = 0;

@@ -68,7 +68,6 @@ public:
     /**
      * Setters
      */
-
     void setMatches(const std::vector<cv::KeyPoint> &leftKeyPoints,
                     const std::vector<cv::KeyPoint> &rightKeyPoints,
                     const std::vector<cv::DMatch> &matches);
@@ -86,27 +85,27 @@ public:
                                       size_t num_lines);
 
 private:
-    // inputs
+    // Inputs
     const cv::Mat &leftImage_;
     const cv::Mat &rightImage_;
     cv::Mat fundamentalMatrix_;
     vector<cv::Point2d> rightMatches_;
     vector<cv::Point2d> leftMatches_;
 
-    // projective
+    // Projective step variables
     cv::Vec3d epipole_;
     cv::Mat A_, B_, Ap_, Bp_;
     cv::Mat w_;
     cv::Mat wp_;
 
-    // similarity
+    // Similarity step variables
     cv::Mat H_p_, Hp_p_;
     cv::Mat H_r_, Hp_r_;
 
-    // shearing
+    // Shearing step variables
     cv::Mat H_1_, H_2_, H_s_, Hp_s_;
 
-    // Rectification
+    // Rectification step variables
     cv::Mat H_, Hp_;
     vector<cv::Point2d> rightRectifiedMatches_;
     vector<cv::Point2d> leftRectifiedMatches_;
@@ -115,9 +114,9 @@ private:
     cv::Mat disparityMapLeft;
     cv::Mat disparityMapRight;
 
-    /**
-     * Computes and draw epilines from a stereo pair of images.
-     */
+	/**
+	* Computes and draw epilines from a stereo pair of images.
+	*/
     static std::pair<vector<cv::Vec3d>,
             vector<cv::Vec3d>> computeEpiLines(const cv::Mat &leftImage,
                                                const cv::Mat &rightImage,
@@ -126,18 +125,24 @@ private:
                                                vector<cv::Point2d> &leftMatches,
                                                vector<cv::Point2d> &rightMatches);
 
-    /**
-     * Computes transformation H_p and Hp_p.
-     */
+	/**
+	* Computes transformation H_p and Hp_p.
+	*/
     void computeProjective();
 
-    /**
-     * Computes transformation H_r and Hp_r.
-     */
+	/**
+	* Computes transformation H_r and Hp_r.
+	*/
     void computeSimilarity();
 
+	/**
+	* Computes shearing transformation H_s_ and Hp_s_.
+	*/
     void computeShearingTransforms();
 
+	/**
+	* Perform rectification on images and key points
+	*/
     void rectifyImagesAndKeyPoints();
 
     /**
@@ -150,12 +155,12 @@ private:
     void computeAB(const cv::Mat &image, const cv::Mat &mat, cv::Mat &A,
                    cv::Mat &B);
 
-    /**
-     * Maximizes the addend from equation 11 in the paper given the A,B matrices
-     * @param[in]  A First parameter matrix.
-     * @param[in]  B Second parameter matrix.
-     * @return The Z vector that maximizes the addend.
-     */
+	/**
+	* Maximizes the addend from equation 11 in the paper given the A,B matrices
+	* @param[in]  A First parameter matrix.
+	* @param[in]  B Second parameter matrix.
+	* @return The Z vector that maximizes the addend.
+	*/
     cv::Vec3d maximizeAddend(const cv::Mat &A, const cv::Mat &B);
 
     /**
@@ -166,10 +171,33 @@ private:
      */
     double getMinYCoordinate(const cv::Mat &image, const cv::Mat &homography);
 
+  	/**
+	* Computes the auxiliary S matrix for shearing transformation
+	* @param[in]  img Image
+	* @param[in]  homography Rectifying homography
+	* @return Auxiliary matrix.
+	*/
     cv::Mat getS(const cv::Mat &img, const cv::Mat &homography);
 
+  	/**
+	* Checks whether the image would be inverted after the homography is applied
+	* @param[in]  img Image
+	* @param[in]  homography Applied homography
+	* @return True if the image would be inverted after the homography is applied
+	*/
     bool isImageInverted(const cv::Mat &image, const cv::Mat &homography);
 
+
+	/**
+	* Draw corresponding epilines for provided images
+	* @param[in] leftImage Left Image
+	* @param[in] leftImage Left Imag
+	* @param[in] leftEpilines Left Image epilines
+	* @param[in] rightEpilines Right Image epilnes
+	* @param[in] leftMatches Left matches points
+	* @param[in] rightMatches Right matches points
+	* @param[in] num_lines Number of lines to draw
+	*/
     static void drawEpilines(cv::Mat &leftImage,
                              cv::Mat &rightImage,
                              vector<cv::Vec3d> &leftEpilines,

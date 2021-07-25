@@ -9,7 +9,7 @@
 #include "../Eigen.h"
 #include "../utils.h"
 
-#define N_POINTS 12
+#define N_POINTS 60
 
 /**
  * NOTE: Taken from lecture, exercise 5
@@ -29,7 +29,7 @@ static inline void fillVector(const T *const input, T *output) {
     output[2] = input[2];
 }
 
-Vector3f rotationToAngleAxis(const Matrix3f &rotation) {
+inline Vector3f rotToAngleAxis(const Matrix3f &rotation) {
     AngleAxisf aa(rotation);
     return aa.angle() * aa.axis();
 }
@@ -191,10 +191,11 @@ public:
             m_initRotation{initRotation},
             m_initTranslation{initTranslation},
             m_initLeftPoints3D{initLeftPoints3D} {
-        if (initLeftPoints3D.cols() != N_POINTS){
-            throw std::runtime_error("BundleAdjustmentOptimizer: Number of points does not match.");
+        nPoints = m_matchesLeft.cols();
+        if (nPoints!= N_POINTS){
+             throw std::runtime_error("BundleAdjustmentOptimizer: Number of points does not match.");
         }
-        m_optimizedLeftPoints3D = MatrixXf::Zero(3, N_POINTS);
+        m_optimizedLeftPoints3D = MatrixXf::Zero(3, nPoints);
     };
 
     Matrix3Xf getOptimized3DPoints(){
@@ -219,7 +220,7 @@ public:
         // Save and return results
         m_optimizedPose = PoseIncrement<double>::convertToMatrix(poseIncrement);
 
-        for(int i = 0; i < N_POINTS; i++){
+        for(int i = 0; i < nPoints; i++){
             m_optimizedLeftPoints3D(0, i) = vars[6 + 3*i];
             m_optimizedLeftPoints3D(1, i) = vars[6 + 3*i +1];
             m_optimizedLeftPoints3D(2, i) = vars[6 + 3*i +2];
@@ -230,18 +231,17 @@ public:
 
     Matrix3f getFundamentalMatrix() const{
         Matrix3f essentialMatrix = vectorAsSkew(m_optimizedPose(seqN(0,3), 3)) * m_optimizedPose(seqN(0,3), seqN(0,3));
-        Matrix3f F = m_intrinsicsRight.transpose().inverse() * essentialMatrix * m_intrinsicsRight.inverse();
+        Matrix3f F = m_intrinsicsRight.inverse().transpose() * essentialMatrix * m_intrinsicsLeft.inverse();
         return F / F.norm();
     }
 
 private:
 
     void prepareConstraints(PoseIncrement<double> &poseIncrement, double* vars, ceres::Problem &problem) {
-        int nPoints = (int) m_matchesLeft.cols();
 
         // inititalize pose and 3D points
-        poseIncrement.setData(rotationToAngleAxis(m_initRotation), m_initTranslation);
-        for(int i = 0; i < N_POINTS; i++){
+        poseIncrement.setData(rotToAngleAxis(m_initRotation), m_initTranslation);
+        for(int i = 0; i < nPoints; i++){
             vars[6+ i*3] = m_initLeftPoints3D(0, i);
             vars[6+ i*3 +1] = m_initLeftPoints3D(1, i);
             vars[6+ i*3 +2] = m_initLeftPoints3D(2, i);
@@ -285,6 +285,7 @@ private:
 
     Matrix4f m_optimizedPose;
     Matrix3Xf m_optimizedLeftPoints3D;
+    int nPoints;
 };
 
 #endif //STEREO_RECONSTRUCTION_BUNDLE_ADJUSTMENT_H
