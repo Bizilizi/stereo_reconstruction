@@ -69,9 +69,9 @@ void ImageRectifier::computeDisparityMapLeft(int blockSize, int minDisparity, in
                         cv::InterpolationFlags::INTER_NEAREST);
 }
 
-void ImageRectifier::computeDisparityMapRight(int blockSize, int minDisparity,  int maxDisparity, double smoothFactor, bool gaussian) {
+void ImageRectifier::computeDisparityMapRight(int blockSize, int minDisparity,  int maxDisparity, double smoothFactor, bool varBlock, double thres) {
     auto blockSearch = BlockSearch(leftRectifiedImage_, rightRectifiedImage_, blockSize, minDisparity, maxDisparity);
-    auto disparityMap_rect = blockSearch.computeDisparityMapRight(smoothFactor);
+    auto disparityMap_rect = blockSearch.computeDisparityMapRight(smoothFactor, varBlock, thres);
 
     disparityMapRight = cv::Mat(rightImage_.rows, rightImage_.cols, CV_64F);
     cv::warpPerspective(disparityMap_rect,
@@ -591,7 +591,8 @@ void ImageRectifier::drawEpilines(cv::Mat &leftImage,
 		cv::Vec3d leftLine = leftEpilines[i];
 		cv::Vec3d rightLine = rightEpilines[i];
 		// Draws only num_lines lines
-		if (i % (leftEpilines.size() / num_lines) == 0) {
+		int size = leftEpilines.size();
+		if (i % ( size / num_lines) == 0) {
 			cv::Scalar color(rng.uniform(0, 255),
 							 rng.uniform(0, 255),
 							 rng.uniform(0, 255));

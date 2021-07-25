@@ -4,6 +4,7 @@
 #include "DataLoader/data_loader.h"
 #include "Rectification/rectification.hpp"
 #include "Reconstruction/reconstruction.h"
+#include "utils.h"
 
 enum detector_id {
     ORB,
@@ -206,24 +207,33 @@ int main(){
                                     F,
                                     good_matches_1,
                                     good_matches_2);
-    rectifier.computeDisparityMapRight(11, 200, 0.9);
+    rectifier.computeDisparityMapRight(11, 0,200, 1.0, false, 100);
     cv::Mat disparityImage = rectifier.getDisparityMapRight();
-    std::cout << "after computation: avg" << cv::mean(disparityImage) <<  std::endl;
 
+    //std::cout << "after computation: avg" << cv::mean(disparityImage) <<  std::endl;
+    //std::cout << disparityImage << "\n";
     cv::imwrite("../../results/test_result.png", disparityImage);
+
+    auto gt_disparity = data.getDisparityRight();
+    auto mask = data.getMaskNonOccludedRight();
+    cv::imwrite("../../results/test_gt.png", gt_disparity);
+    //std::cout << gt_disparity << "\n";
+
+    // evaluate disparity map
+    evaldisp(disparityImage, gt_disparity, mask, 10, 200, 0);
 
     /**
      * 3. Reconstruct scene
      */
-    float focalLength = data.getCameraMatrixLeft()(0,0);
+    float focalLength = data.getCameraMatrixRight()(0,0);
     float baseline = 1.f;  // due to normalization (extrinsics translation vector has length 1)
 
     cv::Mat depthValues = convertDispartiyToDepth(disparityImage, focalLength, baseline);
 
     // intrinsics
-    Matrix3f intrinsics = data.getCameraMatrixLeft();
+    Matrix3f intrinsics = data.getCameraMatrixRight();
 
     float thrMarchingSquares = 1.f;
-    reconstruction(data.getImageLeft(), depthValues, intrinsics, thrMarchingSquares);
+    reconstruction(data.getImageRight(), depthValues, intrinsics, thrMarchingSquares);
 }
 

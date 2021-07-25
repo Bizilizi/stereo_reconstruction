@@ -20,7 +20,8 @@ class BlockSearch {
                 int maxDisparity);
 
   cv::Mat computeDisparityMapLeft(double smoothFactor);
-  cv::Mat computeDisparityMapRight(double smoothFactor, bool gaussianBlur=false);
+  cv::Mat computeDisparityMapRight(double smoothFactor, bool varBlock=false, double thres=19.0);
+
  private:
   cv::Mat leftImage_;
   cv::Mat rightImage_;
@@ -28,5 +29,8 @@ class BlockSearch {
   int maxDisparity_;
   int minDisparity_;
   std::vector<int> blockSizes_;
+
+  double oneBlock();
+  double multiBlocks();
 };
 #endif //STEREO_RECONSTRUCTION_BLOCKSEARCH_H
