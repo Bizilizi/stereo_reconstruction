@@ -7,7 +7,7 @@ bool test_reconstruction_01() {
     std::string rgbPath = "../../../exercise_1/exercise_1_src/exercise_1_src/data/rgbd_dataset_freiburg1_xyz/rgb/1305031102.175304.png";
     std::string depthPath = "../../../exercise_1/exercise_1_src/exercise_1_src/data/rgbd_dataset_freiburg1_xyz/depth/1305031102.160407.png";
 
-    cv::Mat bgrImage = cv::imread(rgbPath, cv::IMREAD_COLOR); // TODO: Fix color issue!
+    cv::Mat bgrImage = cv::imread(rgbPath, cv::IMREAD_COLOR);
     cv::Mat depthImage = cv::imread(depthPath, cv::IMREAD_UNCHANGED); // 16 bit grayscale, scaled by 5000
 
     cv::Mat depthValues = cv::Mat(depthImage.rows, depthImage.cols, CV_32F);
@@ -32,43 +32,42 @@ bool test_reconstruction_01() {
 }
 
 
-
-
 bool test_reconstruction_02(){
-    // our approaches
-    /*
-    //std::string rgbPath = "../../data/rectifiedImage.jpg";
-    //cv::Mat bgrImage = cv::imread(rgbPath, cv::IMREAD_COLOR);
-    //std::string disparityPath = "../../data/windowSearch2.jpg";
-    std::string disparityPath = "../../data/revertTeddyDisp4.png";
-    cv::Mat disparityImage16 = cv::imread(disparityPath, cv::IMREAD_UNCHANGED);
+    // perceptual window search/window search - test on right image!
+//    std::string disparityPath = "../../results/PerceptualWindowSearch/teddy_pipl_disp.png";
+    std::string disparityPath = "../../results/PerceptualWindowSearch/test_result.png";
+    cv::Mat disparityImage8 = cv::imread(disparityPath, cv::IMREAD_GRAYSCALE);
 
-    // dirty conversion
-    cv::Mat disparityImage = cv::Mat(disparityImage16.rows, disparityImage16.cols, CV_32FC1);
+    // conversion to float
+    cv::Mat disparityImage = cv::Mat(disparityImage8.rows, disparityImage8.cols, CV_32FC1);
     for (int i=0; i < disparityImage.rows; i++) {
         for (int j=0; j < disparityImage.cols; j++) {
-            disparityImage.at<float>(i, j) = (float) disparityImage16.at<uint16_t>(i, j) / 5000.f;
+            disparityImage.at<float>(i, j) = (float) disparityImage8.at<uint8_t>(i, j);
         }
     }
-    */
 
     // ground truth
     DataLoader dataLoader = DataLoader();
-    Data trainingData = dataLoader.loadTrainingScenario(3);
-    cv::Mat bgrImage = trainingData.getImageLeft();
-    cv::Mat disparityImage = trainingData.getDisparityLeft();
+    Data trainingData = dataLoader.loadTrainingScenario(13);
+    cv::Mat image = trainingData.getImageRight();
 
-    float focalLength = trainingData.getCameraMatrixLeft()(0,0);
-    //float baseline = 1.f;  // due to normalization (extrinsics translation vector has length 1)
-    float baseline = 1.0;  // Motorcycle
-    //float baseline = 0.080f;  // Teddy
+    float focalLength = trainingData.getCameraMatrixRight()(0,0);
+    float baseline = 1.f;  // due to normalization (extrinsics translation vector has length 1)
 
     cv::Mat depthValues = convertDispartiyToDepth(disparityImage, focalLength, baseline);
+    // filter out large outliers naive way
+    for (int i=0; i < depthValues.rows; i++) {
+        for (int j=0; j < depthValues.cols; j++) {
+            if (depthValues.at<float>(i, j) > 100) {
+                depthValues.at<float>(i, j) = 0;
+            }
+        }
+    }
 
     // intrinsics
-    Matrix3f intrinsics = trainingData.getCameraMatrixLeft();
+    Matrix3f intrinsics = trainingData.getCameraMatrixRight();
 
-    reconstruction(bgrImage, depthValues, intrinsics);
+    reconstruction(image, depthValues, intrinsics, 1);
     return true;
 }
 
@@ -78,13 +77,15 @@ bool test_reconstruction_03(){
      * Testing with HitNet results
      * */
 
-    int scenarioIdx = 0;
+    int scenarioIdx = 13;
 
     DataLoader dataLoader = DataLoader();
     Data trainingData = dataLoader.loadTrainingScenario(scenarioIdx);
-    cv::Mat bgrImage = trainingData.getImageLeft();
+    cv::Mat image = trainingData.getImageLeft();
 
-    cv::Mat disparityImage =  dataLoader.loadTrainingDisparityHitNet(scenarioIdx); // THIS LINE HERE!
+    cv::Mat disparityImage = dataLoader.loadTrainingDisparityHitNet(scenarioIdx);
+//    cv::Mat disparityImage = trainingData.getDisparityLeft();
+    scaleDisparityMap(disparityImage, 1);
 
     // std::cout << disparityImage << std::endl;
 
@@ -97,12 +98,39 @@ bool test_reconstruction_03(){
     Matrix3f intrinsics = trainingData.getCameraMatrixLeft();
 
     float thrMarchingSquares = 1;
-    reconstruction(bgrImage, depthValues, intrinsics, thrMarchingSquares);
+    reconstruction(image, depthValues, intrinsics, thrMarchingSquares);
+    return true;
+}
+
+
+bool test_reconstruction_04(){
+    // perceptual window search/window search - test on right image
+//    std::string disparityPath = "../../results/PerceptualWindowSearch/teddy_pipl_disp.png";
+    std::string disparityPath = "../../results/PerceptualWindowSearch/test_result.png";
+    cv::Mat disparityImage = DataLoader::readGrayscaleImageAsDisparityMap(disparityPath);
+
+    removeDisparityOutliers(disparityImage, 500, 1.5, 0.8);
+    //scaleDisparityMap(disparityImage, 10);
+
+    // ground truth
+    DataLoader dataLoader = DataLoader();
+    Data trainingData = dataLoader.loadTrainingScenario(13);
+    cv::Mat image = trainingData.getImageRight();
+
+    float focalLength = trainingData.getCameraMatrixRight()(0,0);
+    float baseline = 1.f;  // due to normalization (extrinsics translation vector has length 1)
+
+    cv::Mat depthValues = convertDispartiyToDepth(disparityImage, focalLength, baseline);
+
+    // intrinsics
+    Matrix3f intrinsics = trainingData.getCameraMatrixRight();
+
+    reconstruction(image, depthValues, intrinsics, 1);
     return true;
 }
 
 
 int main(){
-    test_reconstruction_03();
+    test_reconstruction_04();
     return 0;
 }
