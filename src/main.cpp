@@ -157,8 +157,9 @@ cv::Mat fundamentalMat(cv::Mat &one, cv::Mat &other,
 }
 
 
-int main(){
+int main() {
     DataLoader dataLoader = DataLoader();
+    std::string disparityPath = "../../results/disparity_map.png";
 
     // select scenarios by index (alphabetic position starting with 0)
     int scenarioIdx = 3;
@@ -183,17 +184,15 @@ int main(){
     auto img_right = data.getImageRight();
     auto rectifier = ImageRectifier(img_left, img_right, fundamentalMatrix, estimatedPose.keypointsLeft, estimatedPose.keypointsRight);
 
-    rectifier.computeDisparityMapRight(17, 200, 0.9);
+    rectifier.computeDisparityMapRight(17, 0, 200, 0.9);
     cv::Mat disparityImageWrite = rectifier.getDisparityMapRight();
 
-    std::string disparityPath = "../../results/disparity_map.png";
     cv::imwrite(disparityPath, disparityImageWrite);
 #endif
 
     /**
      * 3. Reconstruct scene
      */
-    float focalLength = data.getCameraMatrixRight()(0,0);
 
     cv::Mat disparityImage = DataLoader::readGrayscaleImageAsDisparityMap(disparityPath);
 
