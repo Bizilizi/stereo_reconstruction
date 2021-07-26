@@ -261,7 +261,6 @@ RANSAC(const MatrixXf &kpLeftMat, const MatrixXf &kpRightMat, const Matrix3f &ca
     int numMatches = (int) kpLeftMat.cols();
 
     MatrixXf sampledKpLeft, sampledKpRight;
-
     std::vector<int> randomIndices, bestIndices;
 
     // get initial set
@@ -278,7 +277,6 @@ RANSAC(const MatrixXf &kpLeftMat, const MatrixXf &kpRightMat, const Matrix3f &ca
             ep.run();
         } catch (std::runtime_error &e) {
             // invalid depth computed, try next set
-            // std::cout << e.what() << std::endl;
             continue;
         }
         Matrix3Xf rightPoints3D = ep.getPointsRightReconstructed();
@@ -294,8 +292,6 @@ RANSAC(const MatrixXf &kpLeftMat, const MatrixXf &kpRightMat, const Matrix3f &ca
 
     // do optimization
     for (int i = 0; (i < maxIter) && (numMatches - alwaysExclude.size() > numPoints); i++) {
-        // std::cout << "Iteration: " << i << std::endl;
-        // std::cout << "Number of excluded points: " << alwaysExclude.size() << std::endl;
         std::sort(randomIndices.begin(), randomIndices.end());   // for easier debugging
 
         sampledKpLeft = kpLeftMat(all, randomIndices);
@@ -306,9 +302,6 @@ RANSAC(const MatrixXf &kpLeftMat, const MatrixXf &kpRightMat, const Matrix3f &ca
         try {
             ep.run();
         } catch (std::runtime_error &e) {
-            // invalid depth computed, try next set
-            // std::cout << e.what() << std::endl;
-
             // always exclude points that made reconstruction fail (latest added points)
             alwaysExclude.insert(alwaysExclude.end(), latestAddedPoints.begin(), latestAddedPoints.end());
             randomIndices = getRandomIndices(numMatches, numPoints, randomIndices, alwaysExclude);
@@ -328,8 +321,6 @@ RANSAC(const MatrixXf &kpLeftMat, const MatrixXf &kpRightMat, const Matrix3f &ca
         // compute pixel error per match
         VectorXf errors = calculateEuclideanPixelError(leftToRightProjection, ep.getMatchesRight());
 
-        // std::cout << "Errors : " << errors.transpose() << std::endl;
-
         float currentError = errors.sum() / (float) numPoints;
 
         if ((errors.array() < errorThreshold).all()) {
@@ -337,15 +328,11 @@ RANSAC(const MatrixXf &kpLeftMat, const MatrixXf &kpRightMat, const Matrix3f &ca
             return ep;
         } else {
             if (currentError > bestError) {
-                // std::cout << "No improvement, current error: " << currentError << std::endl;
-
                 // exclude latest points if error increased and sample new one
                 alwaysExclude.insert(alwaysExclude.end(), latestAddedPoints.begin(), latestAddedPoints.end());
                 randomIndices = getRandomIndices(numMatches, numPoints, randomIndices, alwaysExclude);
 
             } else {
-                // std::cout << "Improvement made, current error: " << currentError << std::endl;
-
                 // save results
                 bestError = currentError;
                 bestIndices = randomIndices;

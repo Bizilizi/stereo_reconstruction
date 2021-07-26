@@ -56,156 +56,39 @@ void testCaseExtrinsics() {
     std::cout << "Fundamental Matrix" << ep.getFundamentalMatrix() << std::endl;
 }
 
+void testPoseEstimation(const std::vector<int> &scenarioIdx, int nRuns=5){
+    int nScenarios = scenarioIdx.size();
+    VectorXf error8pt = VectorXf::Zero(nScenarios*nRuns);
+    VectorXf errorBA = VectorXf::Zero(nScenarios*nRuns);
+
+    DataLoader dataLoader = DataLoader();
+
+    for(int i = 0; i< nScenarios; i++){
+        for (int n= 0; n<nRuns; n++){
+            Data data = dataLoader.loadTrainingScenario(scenarioIdx.at(i));
+            poseStruct estimatedPose = runFullPoseEstimation(data.getImageLeft(), data.getImageRight(), data.getCameraMatrixLeft(), data.getCameraMatrixRight(), false);
+            error8pt(i*nScenarios + n) = estimatedPose.reError8pt;
+            errorBA(i*nScenarios + n) = estimatedPose.reErrorBA;
+        }
+    }
+
+    VectorXf centeredError8pt = error8pt.array() - error8pt.mean();
+    float std8pt = std::sqrt(centeredError8pt.dot(centeredError8pt) / error8pt.size());
+
+    VectorXf centeredErrorBA = errorBA.array() - errorBA.mean();
+    float stdBA = std::sqrt(centeredErrorBA.dot(centeredErrorBA) / errorBA.size());
+
+    std::cout << "Average error / std 8pt: " << error8pt.mean() << "   " <<  std8pt << std::endl;
+    std::cout << "Average error / std Bundle Adjustment: " << errorBA.mean() << "  " << stdBA << std::endl;
+}
+
+
 
 int main() {
-
     DataLoader dataLoader = DataLoader();
 
     // select scenarios by index (alphabetic position starting with 0)
     Data data = dataLoader.loadTrainingScenario(9);
-    runFullPoseEstimation(data.getImageLeft(), data.getImageRight(), data.getCameraMatrixLeft(), data.getCameraMatrixRight(), true, true);
+    runFullPoseEstimation(data.getImageLeft(), data.getImageRight(), data.getCameraMatrixLeft(), data.getCameraMatrixRight(), true);
 
-#if 0
-
-    // find keypoints
-    std::vector<cv::KeyPoint> keypointsLeft, keypointsRight;
-    cv::Mat featuresLeft, featuresRight;
-
-    SIFTKeypointDetection(data.getImageLeft(), keypointsLeft, featuresLeft);
-    SIFTKeypointDetection(data.getImageRight(), keypointsRight, featuresRight);
-
-    // find correspondences
-    std::vector<cv::DMatch> matches;
-    featureMatching(featuresLeft, featuresRight, matches);
-
-    // visualization of feature extraction
-    cv::Mat outputImageLeft, outputImageRight;
-    cv::drawKeypoints(data.getImageLeft(), keypointsLeft, outputImageLeft);
-    cv::drawKeypoints(data.getImageRight(), keypointsRight, outputImageRight);
-    cv::imwrite("../../results/imageLeft.png", outputImageLeft);
-    cv::imwrite("../../results/imageRight.png", outputImageRight);
-
-    // visualization of feature matching
-    cv::Mat img_matches;
-    cv::drawMatches(data.getImageLeft(), keypointsLeft, data.getImageRight(), keypointsRight, matches, img_matches,
-                    cv::Scalar::all(-1),
-                    cv::Scalar::all(-1), std::vector<char>(), cv::DrawMatchesFlags::NOT_DRAW_SINGLE_POINTS);
-    cv::imwrite("../../results/matching_flann.png", img_matches);
-
-    // estimate pose using the eight point algorithm
-    Matrix3Xf kpLeftMat, kpRightMat;
-
-    transformMatchedKeypointsToEigen(keypointsLeft, keypointsRight, matches, kpLeftMat, kpRightMat, true);
-    std::cout << "Number matches: " << kpLeftMat.cols() << std::endl;
-    std::cout << kpRightMat << std::endl;
-
-    EightPointAlgorithm ep = RANSAC(kpLeftMat, kpRightMat, data.getCameraMatrixLeft(),
-                                    data.getCameraMatrixRight());
-    ep.run();
-
-    // TEST
-    Matrix3Xf rightPoints3D = ep.getPointsRightReconstructed();
-    MatrixXf leftToRightProjection = MatrixXf::Zero(3, rightPoints3D.cols());
-    leftToRightProjection = (data.getCameraMatrixRight() * rightPoints3D).cwiseQuotient(
-            rightPoints3D.row(2).replicate(3, 1));
-
-    std::cout << "compare matches in pixel coordinates:" << std::endl;
-    std::cout << ep.getMatchesRight() << std::endl;
-    std::cout << leftToRightProjection << std::endl;
-
-    for (int i = 0; i < rightPoints3D.cols(); i++) {
-        cv::circle(data.getImageRight(), cv::Point(leftToRightProjection(0, i), leftToRightProjection(1, i)), 5.0,
-                   cv::Scalar(255, 0, 0), 4);
-        cv::circle(data.getImageRight(), cv::Point(ep.getMatchesRight()(0, i), ep.getMatchesRight()(1, i)), 5.0,
-                   cv::Scalar(0, 255, 0), 4);
-        //cv::circle(data.getImageRight(), cv::Point(ep.getMatchesLeft()(0,i), ep.getMatchesLeft()(1,i)), 5.0, cv::Scalar(0, 255, 255), 4);
-    }
-
-    cv::imwrite("../../results/image_after8pt.png", data.getImageRight());
-
-#endif
-
-    // ---------------------------------------------------------
-    // Bundle Adjustment
-    // ---------------------------------------------------------
-
-#if 0
-    std::cout << "BUNDLE ADJUSTMENT" << std::endl;
-    Matrix4f pose = ep.getPose();
-    auto optimizer = BundleAdjustmentOptimizer(ep.getMatchesLeft(), ep.getMatchesRight(), data.getCameraMatrixLeft(),
-                                               data.getCameraMatrixRight(), pose(seqN(0, 3), seqN(0, 3)),
-                                               pose(seqN(0, 3), 3), ep.getPointsLeftReconstructed());
-    pose = optimizer.estimatePose();
-    std::cout << "Final pose estimation: " << std::endl;
-    std::cout << pose << std::endl;
-
-    // testVisualizationExtrinsics();
-    // testCaseExtrinsics();
-
-    for (int i = 0; i < rightPoints3D.cols(); i++) {
-        cv::circle(data.getImageRight(), cv::Point(leftToRightProjection(0, i), leftToRightProjection(1, i)), 5.0,
-                   cv::Scalar(255, 0, 0), 4);
-        cv::circle(data.getImageRight(), cv::Point(ep.getMatchesRight()(0, i), ep.getMatchesRight()(1, i)), 5.0,
-                   cv::Scalar(0, 255, 0), 4);
-        //cv::circle(data.getImageRight(), cv::Point(ep.getMatchesLeft()(0,i), ep.getMatchesLeft()(1,i)), 5.0, cv::Scalar(0, 255, 255), 4);
-    }
-
-    cv::imwrite("../../results/greatImage.png", data.getImageRight());
-
-    // ---------------------------------------------------------
-    // Test fundamental matrix with opencv results
-    // ---------------------------------------------------------
-
-    Matrix3f F_adirondack;
-    F_adirondack << 1.353630396977012e-08, 2.595224518574046e-05, -0.003664439029043263,
-            -2.375965046088001e-05, 6.518226848965876e-06, 0.6848607609793337,
-            0.002978229678431134, -0.6892694179932449, 1;
-    std::cout << "Norm 1: " << F_adirondack.norm() << std::endl;
-    F_adirondack = F_adirondack / F_adirondack.norm();
-
-    Matrix3f F_motorcycle;
-    F_motorcycle << 1.091980817956205e-09, -1.077326037996396e-06, -5.992489813392534e-05,
-            -1.076078736340656e-06, 5.56622420714599e-06, 0.6117147946026104,
-            0.0005622610321208721, -0.615586969390141, 1;
-    std::cout << "Norm 2: " << F_motorcycle.norm();
-    F_motorcycle = F_motorcycle / F_motorcycle.norm();
-
-    Matrix3f F_artl;
-    F_artl << 5.006730349381669e-09, -6.911283149129414e-05, 0.02474192270203782,
-            6.672591643596967e-05, -3.725089989820235e-06, 0.4516838929035329,
-            -0.02386824152172776, -0.4534031147114552, 0.9999999999999999;
-    F_artl = F_artl/ F_artl.norm();
-
-    Matrix3f F = F_motorcycle;
-
-
-    std::cout << std::endl <<  "COMPARISON after Bundle adjustment: " << std::endl;
-    std::cout << "Error " << (optimizer.getFundamentalMatrix() - F).norm() << std::endl;
-    std::cout << "Norm:" << (optimizer.getFundamentalMatrix().norm()) << std::endl;
-    std::cout << optimizer.getFundamentalMatrix() << std::endl << std::endl;
-    std::cout << F << std::endl;
-
-    std::cout << std::endl <<  "COMPARISON 8 pt " << std::endl;
-    std::cout << "Error " << (ep.getFundamentalMatrix() - F).norm() << std::endl;
-    std::cout << "Norm:" << (ep.getFundamentalMatrix().norm()) << std::endl;
-    std::cout << ep.getFundamentalMatrix() << std::endl << std::endl;
-    std::cout << F << std::endl;
-
-    return 0;
-
-#endif
 }
-
-
-/**
-* TODO: next week/future
- *
- * RANSAC:
- *      - embed RANSAC as boolean parameter in class and set mask for indices (somewhere in set/update data)
- *
- * Test if it works for all scenarios: Had runtime exception once (less than 8 input points!!!)
- *
- * Test fundamental matrix
- * Reconstruction Pipeline: Loading ground truth + triangulation
- *
-*/

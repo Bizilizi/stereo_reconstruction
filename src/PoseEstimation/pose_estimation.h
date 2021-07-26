@@ -15,8 +15,18 @@ struct poseStruct {
     float reErrorBA;
 };
 
+/**
+ * Runs the whole pose estimation including the Eight-Point-Algorithm within the RANSAC loop and bundle adjustment optimization
+ * @param imageLeft : left image
+ * @param imageRight : right image
+ * @param intrinsicsLeft : intrinsics of left camera
+ * @param intrinsicsRight : intrinsics of right camera
+ * @param verbose : switch for outputs
+ * @return
+ */
+
 poseStruct runFullPoseEstimation(const cv::Mat &imageLeft, const cv::Mat &imageRight, const Matrix3f &intrinsicsLeft,
-                                 const Matrix3f &intrinsicsRight, bool verbose = false, bool visualize = false);
+                                 const Matrix3f &intrinsicsRight, bool verbose = false);
 
 
 #endif //STEREO_RECONSTRUCTION_POSE_ESTIMATION_H

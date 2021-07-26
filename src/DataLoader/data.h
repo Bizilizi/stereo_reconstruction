@@ -28,8 +28,6 @@ public:
          Matrix3f cameraRight
     );
 
-    // TODO: Add second data constructor including disparities
-
     /**
      * Getters
      */
@@ -49,8 +47,6 @@ public:
     const cv::Mat &getMaskNonOccludedLeft() const;
 
     const cv::Mat &getMaskNonOccludedRight() const;
-
-    // TODO: get disparity maps
 
 private:
     cv::Mat imageLeft;

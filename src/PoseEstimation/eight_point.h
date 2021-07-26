@@ -86,11 +86,24 @@ private:
 
 };
 
-std::vector<int> getRandomIndices(int maxIdx, int length, std::vector<int> init = {}, std::vector<int> exclude = {});
-
+/**
+ * Implements our own version of RANSAC. We propose the following steps to make the Eight-Point-Algorithm robust against outliers: (
+ * (i) Randomly sample N points and run the Eight-Point until a valid reconstruction (all depth values for reconstructed points in left and right
+ * image are positive)
+ * (ii) Refine this results by iteratively calculating the left-to-right projection error for every of the N key points and replacing it
+ * with a new random point.
+ *
+ * @param kpLeftMat : left keypoints provided in a Eigen Matrix
+ * @param kpRightMat : right keypoints provided in a Eigen Matrix
+ * @param cameraLeft : left camera intrinsics
+ * @param cameraRight : right camera intrinsics
+ * @return Instance of the Eight-Point-Algorithm class. NOTE: Needs to be rerun using ep.run() before accessing results
+ */
 
 EightPointAlgorithm
 RANSAC(const MatrixXf &kpLeftMat, const MatrixXf &kpRightMat, const Matrix3f &cameraLeft, const Matrix3f &cameraRight);
+
+std::vector<int> getRandomIndices(int maxIdx, int length, std::vector<int> init = {}, std::vector<int> exclude = {});
 
 VectorXf calculateEuclideanPixelError(const MatrixXf &leftToRightProjection, const MatrixXf &matchesRight);
 

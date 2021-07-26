@@ -5,6 +5,12 @@
 #include "../WindowSearch/BlockSearch.h"
 #include "../WindowSearch/LinearSearch.h"
 
+/**
+ * NOTE: This code is adopted from github implementation:
+ * https://github.com/agarciamontoro/image-rectification
+ * And based on method described in:
+ * http://dev.ipol.im/~morel/Dossier_MVA_2011_Cours_Transparents_Documents/2011_Cours7_Document2_Loop-Zhang-CVPR1999.pdf
+ */
 ImageRectifier::ImageRectifier(const cv::Mat &leftImage,
 							   const cv::Mat &rightImage,
 							   const Matrix3Xf &fundamentalMatrix,

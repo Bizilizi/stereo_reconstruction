@@ -11,7 +11,11 @@ class LinearSearch {
     cv::Mat rightImage;
 public:
     LinearSearch(cv::Mat &leftImage, cv::Mat &rightImage);
-
+    /**
+     * compute the disparity map of right image
+     * @param smoothFactor
+     * @return disparity map
+     */
     cv::Mat computeDisparityMap(double smoothFactor);
 };
 

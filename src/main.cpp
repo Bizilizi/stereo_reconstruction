@@ -8,7 +8,7 @@
 #include "utils.h"
 
 
-#define RUN_ALL 1 // set 0 to only run reconstruction based on pre-computed disparity image
+#define RUN_ALL 1 // set 0 to only run reconstruction based on pre-computed disparity image (used for HitNet and PerceptualWindowSearch)
 
 int main() {
 
@@ -25,12 +25,11 @@ int main() {
      * 1. Estimate Extrinsics (Fundamental Matrix)
      */
 
-
     // select scenarios by index (alphabetic position starting with 0)
-    poseStruct estimatedPose = runFullPoseEstimation(data.getImageLeft(), data.getImageRight(), data.getCameraMatrixLeft(), data.getCameraMatrixRight(), true, true);
+    poseStruct estimatedPose = runFullPoseEstimation(data.getImageLeft(), data.getImageRight(), data.getCameraMatrixLeft(), data.getCameraMatrixRight(), true);
     Matrix3f fundamentalMatrix = estimatedPose.fundamentalMatrix;
 
-    std::cout << "Fundamental matrix (ours): " << std::endl << fundamentalMatrix / fundamentalMatrix.norm() << std::endl;
+    std::cout << "Estimated pose:  " << std::endl << estimatedPose.pose << std::endl;
 
     /**
      * 2. Compute Disparity Map
