@@ -1,6 +1,7 @@
 
 #include "../Reconstruction/reconstruction.h"
 #include "../DataLoader/data_loader.h"
+#include "../utils.h"
 
 
 bool test_reconstruction_01() {
@@ -96,21 +97,6 @@ bool test_reconstruction_04(){
 
     reconstruction(image, depthValues, intrinsics, 1);
     return true;
-}
-
-
-float computeAverageDisparity(cv::Mat& disparityMap) {
-    float sum = 0;
-    int validCounter = 0;
-    for (int i=0; i < disparityMap.rows; i++) {
-        for (int j=0; j < disparityMap.cols; j++) {
-            if (!isinf(disparityMap.at<float>(i, j))) {
-                sum += disparityMap.at<float>(i, j);
-                validCounter++;
-            }
-        }
-    }
-    return sum / validCounter;
 }
 
 

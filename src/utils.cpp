@@ -4,6 +4,22 @@
 
 #include "utils.h"
 
+
+float computeAverageDisparity(cv::Mat& disparityMap) {
+    float sum = 0;
+    int validCounter = 0;
+    for (int i=0; i < disparityMap.rows; i++) {
+        for (int j=0; j < disparityMap.cols; j++) {
+            if (!isinf(disparityMap.at<float>(i, j))) {
+                sum += disparityMap.at<float>(i, j);
+                validCounter++;
+            }
+        }
+    }
+    return sum / validCounter;
+}
+
+
 Matrix3f vectorAsSkew(const Vector3f &vec) {
     Matrix3f skewMatrix = Matrix3f::Zero();
     // upper triangular matrix
@@ -17,6 +33,7 @@ Matrix3f vectorAsSkew(const Vector3f &vec) {
     return skewMatrix;
 }
 
+
 VectorXf kron(const VectorXf &vec1, const VectorXf &vec2) {
     int n = (int) vec1.size();
     int m = (int) vec2.size();
@@ -28,6 +45,7 @@ VectorXf kron(const VectorXf &vec1, const VectorXf &vec2) {
 
     return out;
 }
+
 
 void transformMatchedKeypointsToEigen(const std::vector<cv::KeyPoint> &keypointsLeft,
                                       const std::vector<cv::KeyPoint> &keypointsRight,
@@ -55,6 +73,7 @@ void transformMatchedKeypointsToEigen(const std::vector<cv::KeyPoint> &keypoints
     }
 }
 
+
 std::vector<int> uniqueColumnsInMatrix(const Matrix3Xf &pointMat, float tol) {
     if (pointMat.cols() == 0 )
         return std::vector<int> {};
@@ -74,6 +93,7 @@ std::vector<int> uniqueColumnsInMatrix(const Matrix3Xf &pointMat, float tol) {
     }
     return uniqueIdx;
 }
+
 
 float averageReconstructionError(const Matrix3Xf& matchesLeft, const Matrix3Xf& matchesRight,
                                  const Matrix3f& intrinsicsLeft, const Matrix3f& intrinsicsRight,
@@ -98,6 +118,7 @@ float averageReconstructionError(const Matrix3Xf& matchesLeft, const Matrix3Xf& 
 
     return (errorsLeft.sum() + errorsRight.sum()) / (2.f * nPoints);
 }
+
 
 void evaldisp(cv::Mat disp, cv::Mat gtdisp, cv::Mat mask, float badthresh, float maxdisp, int rounddisp)
 {

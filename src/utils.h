@@ -74,4 +74,11 @@ float averageReconstructionError(const Matrix3Xf& matchesLeft, const Matrix3Xf& 
                                  const Matrix3f& rotation, const Vector3f& translation,
                                  const Matrix3Xf& reconstructedPointsLeft);
 
+/**
+ * Computes average disparity in disparity map
+ * @param disparityMap
+ * @return average disparity
+ */
+float computeAverageDisparity(cv::Mat& disparityMap);
+
 #endif //STEREO_RECONSTRUCTION_UTILS_H
