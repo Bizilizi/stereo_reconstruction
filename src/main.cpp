@@ -162,7 +162,7 @@ int main() {
     std::string disparityPath = "../../results/disparity_map.png";
 
     // select scenarios by index (alphabetic position starting with 0)
-    int scenarioIdx = 3;
+    int scenarioIdx = 13;
     Data data = dataLoader.loadTrainingScenario(scenarioIdx);
 
 #if RUN_ALL
@@ -180,9 +180,7 @@ int main() {
      * 2. Compute Disparity Map
      */
 
-    auto img_left = data.getImageLeft();
-    auto img_right = data.getImageRight();
-    auto rectifier = ImageRectifier(img_left, img_right, fundamentalMatrix, estimatedPose.keypointsLeft, estimatedPose.keypointsRight);
+    ImageRectifier rectifier = ImageRectifier(data.getImageLeft(), data.getImageRight(), fundamentalMatrix, estimatedPose.keypointsLeft, estimatedPose.keypointsRight);
 
     rectifier.computeDisparityMapRight(17, 0, 200, 0.9);
     cv::Mat disparityImageWrite = rectifier.getDisparityMapRight();
@@ -196,7 +194,7 @@ int main() {
 
     cv::Mat disparityImage = DataLoader::readGrayscaleImageAsDisparityMap(disparityPath);
 
-    // remove outliers
+    // remove and replace outliers
     removeDisparityOutliers(disparityImage, 500, 1.5, 0.8);
 
     // create depth map

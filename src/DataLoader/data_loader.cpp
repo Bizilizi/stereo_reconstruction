@@ -160,7 +160,7 @@ cv::Mat DataLoader::loadTrainingDisparityHitNet(int scenarioIndex) {
     cv::Mat dispLeft, dispRight;
     loadDisparityMatrices(scenarioPath, dispLeft, dispRight);
 
-    return dispLeft;
+    return dispRight;
 }
 
 cv::Mat DataLoader::loadTestDisparityHitNet(int scenarioIndex) {
@@ -173,7 +173,7 @@ cv::Mat DataLoader::loadTestDisparityHitNet(int scenarioIndex) {
     cv::Mat dispLeft, dispRight;
     loadDisparityMatrices(scenarioPath, dispLeft, dispRight);
 
-    return dispLeft;
+    return dispRight;
 }
 
 

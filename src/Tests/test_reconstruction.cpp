@@ -72,37 +72,6 @@ bool test_reconstruction_02(){
 }
 
 
-bool test_reconstruction_03(){
-    /*
-     * Testing with HitNet results
-     * */
-
-    int scenarioIdx = 13;
-
-    DataLoader dataLoader = DataLoader();
-    Data trainingData = dataLoader.loadTrainingScenario(scenarioIdx);
-    cv::Mat image = trainingData.getImageLeft();
-
-    cv::Mat disparityImage = dataLoader.loadTrainingDisparityHitNet(scenarioIdx);
-//    cv::Mat disparityImage = trainingData.getDisparityLeft();
-    scaleDisparityMap(disparityImage, 1);
-
-    // std::cout << disparityImage << std::endl;
-
-    float focalLength = trainingData.getCameraMatrixLeft()(0,0);
-    float baseline = 1.f;  // due to normalization (extrinsics translation vector has length 1)
-
-    cv::Mat depthValues = convertDisparityToDepth(disparityImage, focalLength, baseline);
-
-    // intrinsics
-    Matrix3f intrinsics = trainingData.getCameraMatrixLeft();
-
-    float thrMarchingSquares = 1;
-    reconstruction(image, depthValues, intrinsics, thrMarchingSquares);
-    return true;
-}
-
-
 bool test_reconstruction_04(){
     // perceptual window search/window search - test on right image
 //    std::string disparityPath = "../../results/PerceptualWindowSearch/teddy_pipl_disp.png";
@@ -130,7 +99,34 @@ bool test_reconstruction_04(){
 }
 
 
+bool test_reconstruction_HitNet(){
+    /*
+     * Testing with HitNet results
+     * */
+
+    int scenarioIdx = 13;
+
+    DataLoader dataLoader = DataLoader();
+    Data trainingData = dataLoader.loadTrainingScenario(scenarioIdx);
+    cv::Mat image = trainingData.getImageRight();
+
+    cv::Mat disparityImage = dataLoader.loadTrainingDisparityHitNet(scenarioIdx);
+
+    float focalLength = trainingData.getCameraMatrixRight()(0,0);
+    float baseline = 1.f;  // due to normalization (extrinsics translation vector has length 1)
+
+    cv::Mat depthValues = convertDisparityToDepth(disparityImage, focalLength, baseline);
+
+    // intrinsics
+    Matrix3f intrinsics = trainingData.getCameraMatrixRight();
+
+    float thrMesh = 1;
+    reconstruction(image, depthValues, intrinsics, thrMesh);
+    return true;
+}
+
+
 int main(){
-    test_reconstruction_04();
+    test_reconstruction_HitNet();
     return 0;
 }
