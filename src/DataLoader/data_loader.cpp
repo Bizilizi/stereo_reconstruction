@@ -17,13 +17,13 @@ DataLoader::DataLoader() {
 
     // prepare for HitNet
     std::string trainingPathHitNet = getCurrentDirectory() + "/../../results/HitNet/trainingH";
-    for (const auto& scenario : std::filesystem::directory_iterator(trainingPath)) {
+    for (const auto& scenario : std::filesystem::directory_iterator(trainingPathHitNet)) {
         trainingScenarioPathsHitNet.emplace_back(scenario.path());
     }
     std::sort(trainingScenarioPathsHitNet.begin(), trainingScenarioPathsHitNet.end());
 
     std::string testPathHitNet = getCurrentDirectory() + "/../../results/HitNet/testH";
-    for (const auto& scenario : std::filesystem::directory_iterator(testPath)) {
+    for (const auto& scenario : std::filesystem::directory_iterator(testPathHitNet)) {
         testScenarioPathsHitNet.emplace_back(scenario.path());
     }
     std::sort(testScenarioPathsHitNet.begin(), testScenarioPathsHitNet.end());
@@ -122,7 +122,20 @@ void DataLoader::loadDisparityMatrices(const string &scenarioPath, cv::Mat& disp
     memcpy(dispLeft.data, dispRawLeft.PixelAddress(0,0,0), szLeft);
     size_t szRight = dispRight.rows * dispRight.cols * sizeof(float);
     memcpy(dispRight.data, dispRawRight.PixelAddress(0,0,0), szRight);
+}
 
+cv::Mat DataLoader::loadLeftDisparityHitNet(const string &scenarioPath) {
+    // get disparities
+    cv::Mat disparityImage16 = cv::imread(scenarioPath + "/im0_reference.png", cv::IMREAD_COLOR);
+
+    // conversion to float
+    cv::Mat disparityImage = cv::Mat(disparityImage16.rows, disparityImage16.cols, CV_32FC1);
+    for (int i=0; i < disparityImage.rows; i++) {
+        for (int j=0; j < disparityImage.cols; j++) {
+            disparityImage.at<float>(i, j) = (float) disparityImage16.at<cv::Vec3b>(i, j)[0];
+        }
+    }
+    return disparityImage;
 }
 
 void DataLoader::readCameraMatrices(const std::string &scenarioPath, Matrix3f &cameraLeft, Matrix3f &cameraRight) {
@@ -157,10 +170,9 @@ cv::Mat DataLoader::loadTrainingDisparityHitNet(int scenarioIndex) {
     std::string scenarioPath = trainingScenarioPathsHitNet[scenarioIndex];
 
     // get disparity map
-    cv::Mat dispLeft, dispRight;
-    loadDisparityMatrices(scenarioPath, dispLeft, dispRight);
+    cv::Mat dispLeft = loadLeftDisparityHitNet(scenarioPath);
 
-    return dispRight;
+    return dispLeft;
 }
 
 cv::Mat DataLoader::loadTestDisparityHitNet(int scenarioIndex) {
@@ -170,10 +182,9 @@ cv::Mat DataLoader::loadTestDisparityHitNet(int scenarioIndex) {
     std::string scenarioPath = testScenarioPathsHitNet[scenarioIndex];
 
     // get disparity map
-    cv::Mat dispLeft, dispRight;
-    loadDisparityMatrices(scenarioPath, dispLeft, dispRight);
+    cv::Mat dispLeft = loadLeftDisparityHitNet(scenarioPath);
 
-    return dispRight;
+    return dispLeft;
 }
 
 

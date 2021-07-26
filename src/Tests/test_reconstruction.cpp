@@ -99,6 +99,21 @@ bool test_reconstruction_04(){
 }
 
 
+float computeAverageDisparity(cv::Mat& disparityMap) {
+    float sum = 0;
+    int validCounter = 0;
+    for (int i=0; i < disparityMap.rows; i++) {
+        for (int j=0; j < disparityMap.cols; j++) {
+            if (!isinf(disparityMap.at<float>(i, j))) {
+                sum += disparityMap.at<float>(i, j);
+                validCounter++;
+            }
+        }
+    }
+    return sum / validCounter;
+}
+
+
 bool test_reconstruction_HitNet(){
     /*
      * Testing with HitNet results
@@ -108,17 +123,28 @@ bool test_reconstruction_HitNet(){
 
     DataLoader dataLoader = DataLoader();
     Data trainingData = dataLoader.loadTrainingScenario(scenarioIdx);
-    cv::Mat image = trainingData.getImageRight();
+    cv::Mat image = trainingData.getImageLeft();
 
     cv::Mat disparityImage = dataLoader.loadTrainingDisparityHitNet(scenarioIdx);
 
-    float focalLength = trainingData.getCameraMatrixRight()(0,0);
+    cv::Mat disparityImageGT = trainingData.getDisparityLeft();
+    // calculate image mean
+    float mean = computeAverageDisparity(disparityImage);
+    float meanGT = computeAverageDisparity(disparityImageGT);
+    // scale HitNet according to ground truth
+    scaleDisparityMap(disparityImage, meanGT/mean);
+
+    // write disparity
+    std::string disparityPath = "../../results/disparity_map.png";
+    cv::imwrite(disparityPath, disparityImage);
+
+    float focalLength = trainingData.getCameraMatrixLeft()(0,0);
     float baseline = 1.f;  // due to normalization (extrinsics translation vector has length 1)
 
     cv::Mat depthValues = convertDisparityToDepth(disparityImage, focalLength, baseline);
 
     // intrinsics
-    Matrix3f intrinsics = trainingData.getCameraMatrixRight();
+    Matrix3f intrinsics = trainingData.getCameraMatrixLeft();
 
     float thrMesh = 1;
     reconstruction(image, depthValues, intrinsics, thrMesh);
