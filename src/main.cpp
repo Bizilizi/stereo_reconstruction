@@ -147,7 +147,37 @@ cv::Mat fundamentalMat(cv::Mat &one, cv::Mat &other,
     return F;
 }
 
+void testPoseEstimation(const std::vector<int> &scenarioIdx, int nRuns=5){
+    int nScenarios = scenarioIdx.size();
+    VectorXf error8pt = VectorXf::Zero(nScenarios*nRuns);
+    VectorXf errorBA = VectorXf::Zero(nScenarios*nRuns);
+
+    DataLoader dataLoader = DataLoader();
+
+    for(int i = 0; i< nScenarios; i++){
+        for (int n= 0; n<nRuns; n++){
+            Data data = dataLoader.loadTrainingScenario(scenarioIdx.at(i));
+            poseStruct estimatedPose = runFullPoseEstimation(data.getImageLeft(), data.getImageRight(), data.getCameraMatrixLeft(), data.getCameraMatrixRight(), true, false);
+            error8pt(i*nScenarios + n) = estimatedPose.reError8pt;
+            errorBA(i*nScenarios + n) = estimatedPose.reErrorBA;
+        }
+    }
+
+    VectorXf centeredError8pt = error8pt.array() - error8pt.mean();
+    float std8pt = std::sqrt(centeredError8pt.dot(centeredError8pt) / error8pt.size());
+
+    VectorXf centeredErrorBA = errorBA.array() - errorBA.mean();
+    float stdBA = std::sqrt(centeredErrorBA.dot(centeredErrorBA) / errorBA.size());
+
+    std::cout << "Average error / std 8pt: " << error8pt.mean() << "   " <<  std8pt << std::endl;
+    std::cout << "Average error / std Bundle Adjustment: " << errorBA.mean() << "  " << stdBA << std::endl;
+
+}
+
 int main(){
+    // std::vector<int> scenarioIdx{12};   // 13, 0, 5, 8, 12
+    // testPoseEstimation(scenarioIdx, 10);
+
     DataLoader dataLoader = DataLoader();
 
     // select scenarios by index (alphabetic position starting with 0)
@@ -157,6 +187,7 @@ int main(){
     /**
      * 1. Estimate Extrinsics (Fundamental Matrix)
      */
+
 
     // select scenarios by index (alphabetic position starting with 0)
     poseStruct estimatedPose = runFullPoseEstimation(data.getImageLeft(), data.getImageRight(), data.getCameraMatrixLeft(), data.getCameraMatrixRight(), true, true);
@@ -168,6 +199,7 @@ int main(){
      * 2. Compute Disparity Map
      */
 
+    /*
     auto img_left = data.getImageLeft();
     auto img_right = data.getImageRight();
     auto rectifier = ImageRectifier(img_left, img_right, fundamentalMatrix, estimatedPose.keypointsLeft, estimatedPose.keypointsRight);
@@ -176,6 +208,8 @@ int main(){
     cv::Mat disparityImage = rectifier.getDisparityMapRight();
 
     cv::imwrite("../../results/disparity_map.png", disparityImage);
+     */
+
 
     /**
      * 3. Reconstruct scene
@@ -192,6 +226,10 @@ int main(){
 
     float thrMarchingSquares = 1.f;
     reconstruction(data.getImageLeft(), depthValues, intrinsics, thrMarchingSquares);
+
+
+
+
 
      */
 }

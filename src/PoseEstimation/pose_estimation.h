@@ -11,6 +11,8 @@ struct poseStruct {
     Matrix3f fundamentalMatrix;
     Matrix3Xf keypointsLeft;
     Matrix3Xf keypointsRight;
+    float reError8pt;
+    float reErrorBA;
 };
 
 poseStruct runFullPoseEstimation(const cv::Mat &imageLeft, const cv::Mat &imageRight, const Matrix3f &intrinsicsLeft,

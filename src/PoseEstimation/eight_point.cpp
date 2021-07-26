@@ -294,16 +294,12 @@ RANSAC(const MatrixXf &kpLeftMat, const MatrixXf &kpRightMat, const Matrix3f &ca
 
     // do optimization
     for (int i = 0; (i < maxIter) && (numMatches - alwaysExclude.size() > numPoints); i++) {
-        std::cout << "Iteration: " << i << std::endl;
-        std::cout << "Number of excluded points: " << alwaysExclude.size() << std::endl;
+        // std::cout << "Iteration: " << i << std::endl;
+        // std::cout << "Number of excluded points: " << alwaysExclude.size() << std::endl;
         std::sort(randomIndices.begin(), randomIndices.end());   // for easier debugging
 
         sampledKpLeft = kpLeftMat(all, randomIndices);
         sampledKpRight = kpRightMat(all, randomIndices);
-
-        std::cout << "Random indices: " << std::endl;
-        for (auto idx : randomIndices)
-            std::cout << idx << "   ";
 
         // estimate extrinsics
         EightPointAlgorithm ep(sampledKpLeft, sampledKpRight, cameraLeft, cameraRight);
@@ -311,7 +307,7 @@ RANSAC(const MatrixXf &kpLeftMat, const MatrixXf &kpRightMat, const Matrix3f &ca
             ep.run();
         } catch (std::runtime_error &e) {
             // invalid depth computed, try next set
-            std::cout << e.what() << std::endl;
+            // std::cout << e.what() << std::endl;
 
             // always exclude points that made reconstruction fail (latest added points)
             alwaysExclude.insert(alwaysExclude.end(), latestAddedPoints.begin(), latestAddedPoints.end());
@@ -332,7 +328,7 @@ RANSAC(const MatrixXf &kpLeftMat, const MatrixXf &kpRightMat, const Matrix3f &ca
         // compute pixel error per match
         VectorXf errors = calculateEuclideanPixelError(leftToRightProjection, ep.getMatchesRight());
 
-        std::cout << "Errors : " << errors.transpose() << std::endl;
+        // std::cout << "Errors : " << errors.transpose() << std::endl;
 
         float currentError = errors.sum() / (float) numPoints;
 
@@ -341,14 +337,14 @@ RANSAC(const MatrixXf &kpLeftMat, const MatrixXf &kpRightMat, const Matrix3f &ca
             return ep;
         } else {
             if (currentError > bestError) {
-                std::cout << "No improvement, current error: " << currentError << std::endl;
+                // std::cout << "No improvement, current error: " << currentError << std::endl;
 
                 // exclude latest points if error increased and sample new one
                 alwaysExclude.insert(alwaysExclude.end(), latestAddedPoints.begin(), latestAddedPoints.end());
                 randomIndices = getRandomIndices(numMatches, numPoints, randomIndices, alwaysExclude);
 
             } else {
-                std::cout << "Improvement made, current error: " << currentError << std::endl;
+                // std::cout << "Improvement made, current error: " << currentError << std::endl;
 
                 // save results
                 bestError = currentError;

@@ -86,17 +86,17 @@ float averageReconstructionError(const Matrix3Xf& matchesLeft, const Matrix3Xf& 
     projectedPointsLeft = (intrinsicsLeft * reconstructedPointsLeft).cwiseQuotient(reconstructedPointsLeft.row(2).replicate(3,1));
 
     VectorXf errorsLeft;
-    errorsLeft = (projectedPointsLeft - matchesLeft).colwise().squaredNorm();
+    errorsLeft = (projectedPointsLeft - matchesLeft).colwise().norm();
     std::cout << "Error left: " << errorsLeft.sum() / (float) nPoints << std::endl;
 
     // projection error right picture
     Matrix3Xf translatedPoints, projectedPointsRight;
     translatedPoints = rotation * reconstructedPointsLeft + translation.replicate(1, nPoints);
     projectedPointsRight = (intrinsicsRight * translatedPoints).cwiseQuotient(translatedPoints.row(2).replicate(3,1));
-    VectorXf errorsRight = (projectedPointsRight - matchesRight).colwise().squaredNorm();
+    VectorXf errorsRight = (projectedPointsRight - matchesRight).colwise().norm();
     std::cout << "Errors right: " << errorsRight.sum() / (float) nPoints << std::endl;
 
-    return (errorsLeft.sum() + errorsRight.sum()) / (2.f * nPoints);
+    return (errorsLeft.mean() + errorsRight.mean()) / 2.f;
 }
 
 

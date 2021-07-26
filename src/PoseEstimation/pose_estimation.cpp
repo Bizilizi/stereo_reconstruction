@@ -33,9 +33,46 @@ poseStruct runFullPoseEstimation(const cv::Mat &imageLeft, const cv::Mat &imageR
     EightPointAlgorithm ep = RANSAC(kpLeftMat, kpRightMat, intrinsicsLeft, intrinsicsRight);
     ep.run();
     Matrix3Xf pointsLeftReconstructed8pt = ep.getPointsLeftReconstructed();
+    Matrix3Xf leftKeypoints8pt = ep.getMatchesLeft();
+
     Matrix4f poseRANSAC = ep.getPose();
     Matrix3f R = poseRANSAC(seqN(0,3), seqN(0,3));
     Vector3f T = poseRANSAC(seqN(0,3), 3);
+
+#if 0
+    if (visualize){
+
+        // 8pt
+        Matrix3Xf pointsRightReconstructed8pt = Matrix3Xf::Zero(3, pointsLeftReconstructed8pt.cols());
+        Matrix3Xf leftToRightProjection = Matrix3Xf::Zero(3, pointsLeftReconstructed8pt.cols());
+
+        pointsRightReconstructed8pt = (R * pointsLeftReconstructed8pt) + T.replicate(1, pointsLeftReconstructed8pt.cols());
+        leftToRightProjection = intrinsicsRight * pointsRightReconstructed8pt.cwiseQuotient(pointsRightReconstructed8pt.row(2).replicate(3,1));;
+
+        // left image: bundle adjustment and eight point algorithm
+        cv::Mat copyLeft = imageLeft;
+        cv::Mat copyRight = imageRight;
+        for (int i = 0; i < pointsRightReconstructed8pt.cols(); i++) {
+            cv::circle(copyLeft, cv::Point(ep.getMatchesLeft()(0, i), ep.getMatchesLeft()(1, i)), 5,
+                       cv::Scalar(0, 255, 0), 5);
+        }
+
+        // right image: bundle adjustment and eight point algorithm
+        for (int i = 0; i < pointsRightReconstructed8pt.cols(); i++) {
+            cv::circle(copyRight, cv::Point(ep.getMatchesRight()(0, i), ep.getMatchesRight()(1, i)), 5.0,
+                       cv::Scalar(0, 255, 0), 5);
+            cv::circle(copyRight, cv::Point(leftToRightProjection(0, i), leftToRightProjection(1, i)), 8.0,
+                       cv::Scalar(0, 0, 255), 3);
+        }
+
+        cv::Mat combinedImage;
+        cv::hconcat(copyLeft, copyRight, combinedImage);
+        cv::imwrite("../../results/eight_point.png", combinedImage);
+
+        // 3D pose after bundle adjustment
+        showExtrinsicsReconstruction("../../results/extrinsics_eight_point.off", poseRANSAC, pointsLeftReconstructed8pt, pointsLeftReconstructed8pt);
+    }
+#endif
 
     // filter out points with high reprojection error: reconstruct depth of all matches first, then compute error, then filter
     // depth
@@ -51,7 +88,7 @@ poseStruct runFullPoseEstimation(const cv::Mat &imageLeft, const cv::Mat &imageR
     leftToRightProjection = (intrinsicsRight * pointsRightReconstructed).cwiseQuotient(pointsRightReconstructed.row(2).replicate(3, 1));
 
     VectorXf reError8pt = calculateEuclideanPixelError(leftToRightProjection, kpRightMat);
-    std::cout << "Errors:" << std::endl <<  reError8pt.array() << std::endl;
+    // std::cout << "Errors:" << std::endl <<  reError8pt.array() << std::endl;
     VectorXi filterMask = ((reError8pt.array() > reError8pt.array().mean() * 2) + (depthVec.array() < 0)).cast<int>();
     // std::cout << filterMask << std::endl;
 
@@ -69,9 +106,6 @@ poseStruct runFullPoseEstimation(const cv::Mat &imageLeft, const cv::Mat &imageR
             idxFiltered++;
         }
     }
-    // std::cout << kpLeftMat << std::endl;
-    std::cout << kpLeftFiltered << std::endl;
-    std::cout << pointsLeftReconstructedFiltered << std::endl;
 
     // -----------------------------------------------
     // Bundle Adjustment
@@ -89,10 +123,6 @@ poseStruct runFullPoseEstimation(const cv::Mat &imageLeft, const cv::Mat &imageR
         kpRightReduced = kpRightFiltered(all, seqN(0, maxPoints));
         pointsLeftReconstructedReduced = pointsLeftReconstructedFiltered(all, seqN(0, maxPoints));
     }
-    std::cout << "MARKER" << std::endl;
-    std::cout << kpLeftFiltered << std::endl;
-    std::cout << "reconstructed points" << std::endl;
-    std::cout << pointsLeftReconstructedFiltered << std::endl;
 
     auto optimizer = BundleAdjustmentOptimizer(kpLeftReduced, kpRightReduced, intrinsicsLeft,
                                                intrinsicsRight, R, T, pointsLeftReconstructedReduced);
@@ -106,58 +136,60 @@ poseStruct runFullPoseEstimation(const cv::Mat &imageLeft, const cv::Mat &imageR
                         cv::Scalar::all(-1), std::vector<char>(), cv::DrawMatchesFlags::NOT_DRAW_SINGLE_POINTS);
         cv::imwrite("../../results/SIFT_matches.png", img_matches);
 
-        // bundle adjustment left to right projection: left image
+        // optimizer
         Matrix3Xf optimized3DPoints = optimizer.getOptimized3DPoints();
         Matrix3Xf projected3DPointsLeft = intrinsicsLeft * optimized3DPoints.cwiseQuotient(optimized3DPoints.row(2).replicate(3,1));
-        Matrix3Xf pointsRightReconstructed8pt = Matrix3Xf::Zero(3, pointsLeftReconstructed8pt.cols());
-        Matrix3Xf leftToRightProjection = Matrix3Xf::Zero(3, pointsLeftReconstructed8pt.cols());
-        pointsRightReconstructed8pt = (R * pointsLeftReconstructed8pt) + T.replicate(1, pointsLeftReconstructed8pt.cols());
+        Matrix3Xf projected3DPointsRight = (pose(seqN(0,3), seqN(0,3)) * optimized3DPoints +
+                pose(seqN(0,3), 3).replicate(1, optimized3DPoints.cols()));
+        projected3DPointsRight =  intrinsicsRight * projected3DPointsRight.cwiseQuotient(projected3DPointsRight.row(2).replicate(3,1));
+
+        // 8pt
+        Matrix3Xf pointsRightReconstructed8pt = Matrix3Xf::Zero(3, pointsLeftReconstructedFiltered.cols());
+        Matrix3Xf leftToRightProjection = Matrix3Xf::Zero(3, pointsLeftReconstructedFiltered.cols());
+
+        pointsRightReconstructed8pt = (R * pointsLeftReconstructedFiltered) + T.replicate(1, pointsLeftReconstructedFiltered.cols());
         leftToRightProjection = intrinsicsRight * pointsRightReconstructed8pt.cwiseQuotient(pointsRightReconstructed8pt.row(2).replicate(3,1));;
-        std::cout << leftToRightProjection << std::endl;
 
+        // left image: bundle adjustment and eight point algorithm
         for (int i = 0; i < optimized3DPoints.cols(); i++) {
-            cv::circle(imageLeft, cv::Point(projected3DPointsLeft(0, i), projected3DPointsLeft(1, i)), 3,
-                       cv::Scalar(255, 0, 0), 5);
-            cv::circle(imageLeft, cv::Point(kpLeftReduced(0, i), kpLeftReduced(1, i)), 5.0,
+            cv::circle(imageLeft, cv::Point(projected3DPointsLeft(0, i), projected3DPointsLeft(1, i)), 7,
+                       cv::Scalar(255, 0, 0), 2);
+            cv::circle(imageLeft, cv::Point(kpLeftReduced(0, i), kpLeftReduced(1, i)), 3,
                        cv::Scalar(0, 255, 0), 3);
-            if (i < leftToRightProjection.cols()) {
-                cv::circle(imageLeft, cv::Point(leftToRightProjection(0, i), leftToRightProjection(1, i)), 5.0,
-                           cv::Scalar(0, 0, 255), 3);
-            }
         }
 
-        // bundle adjustment left to right projection: right image
+        // right image: bundle adjustment and eight point algorithm
         for (int i = 0; i < optimized3DPoints.cols(); i++) {
-            cv::circle(imageLeft, cv::Point(projected3DPointsLeft(0, i), projected3DPointsLeft(1, i)), 3,
-                       cv::Scalar(255, 0, 0), 5);
-            cv::circle(imageLeft, cv::Point(kpLeftReduced(0, i), kpLeftReduced(1, i)), 5.0,
+            cv::circle(imageRight, cv::Point(projected3DPointsRight(0, i), projected3DPointsRight(1, i)), 7,
+                       cv::Scalar(255, 0, 0), 2);
+            cv::circle(imageRight, cv::Point(kpRightReduced(0, i), kpRightReduced(1, i)), 3.0,
                        cv::Scalar(0, 255, 0), 3);
-            if (i < leftToRightProjection.cols()) {
-                cv::circle(imageLeft, cv::Point(leftToRightProjection(0, i), leftToRightProjection(1, i)), 5.0,
-                           cv::Scalar(0, 0, 255), 3);
-            }
+            // cv::circle(imageRight, cv::Point(leftToRightProjection(0, i), leftToRightProjection(1, i)), 7.0,
+            //            cv::Scalar(0, 0, 255), 2);
         }
 
-        cv::imwrite("../../results/reconstruction_error_bundle_adjustment.png", imageLeft);
+        cv::Mat combinedImage;
+        cv::hconcat(imageLeft, imageRight, combinedImage);
+        cv::imwrite("../../results/reconstruction_error_bundle_adjustment.png", combinedImage);
 
         // 3D pose after bundle adjustment
         showExtrinsicsReconstruction("../../results/reconstruction_error_bundle_adjustment.off", pose, optimized3DPoints, optimized3DPoints);
     }
 
+    Matrix3Xf optimized3DPointsLeft = optimizer.getOptimized3DPoints();
+    float reErrorBundleAdjustment = averageReconstructionError(kpLeftReduced, kpRightReduced, intrinsicsLeft, intrinsicsRight, pose(seqN(0,3), seqN(0,3)), pose(seqN(0,3), 3), optimized3DPointsLeft);
+    float reError8ptAlgorithm = averageReconstructionError(kpLeftReduced, kpRightReduced, intrinsicsLeft, intrinsicsRight, poseRANSAC(seqN(0,3), seqN(0,3)), poseRANSAC(seqN(0,3), 3), pointsLeftReconstructedReduced);
+
     if (verbose) {
-        Matrix3Xf optimized3DPointsLeft = optimizer.getOptimized3DPoints();
-        std::cout << optimized3DPointsLeft << std::endl;
-        float reErrorBundleAdjustment = averageReconstructionError(kpLeftReduced, kpRightReduced, intrinsicsLeft, intrinsicsRight, pose(seqN(0,3), seqN(0,3)), pose(seqN(0,3), 3), optimized3DPointsLeft);
-        float reError8ptAlgorithm = averageReconstructionError(kpLeftReduced, kpRightReduced, intrinsicsLeft, intrinsicsRight, poseRANSAC(seqN(0,3), seqN(0,3)), poseRANSAC(seqN(0,3), 3), pointsLeftReconstructedReduced);
 
         std::cout << "------------ Pose Estimation ------------" << std::endl;
         std::cout << "Number of SIFT matches: " << numMatches << std::endl;
         std::cout << "Number outliers: " << (filterMask.array() > 0).count() <<  std::endl;
         std::cout << "Average reprojection error after 8pt algorithm: " << reError8ptAlgorithm << std::endl;
         std::cout << "Average reprojection error after bundle adjustment: " << reErrorBundleAdjustment << std::endl;
-        std::cout << "Estimated pose: " << pose << std::endl;
+        std::cout << "Estimated pose: " << std::endl << pose << std::endl;
     }
 
-    poseStruct result = poseStruct{ pose, optimizer.getFundamentalMatrix(), kpLeftReduced, kpRightReduced };
+    poseStruct result = poseStruct{ pose, optimizer.getFundamentalMatrix(), kpLeftReduced, kpRightReduced, reError8ptAlgorithm, reErrorBundleAdjustment};
     return result;
 }
