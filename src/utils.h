@@ -48,6 +48,17 @@ void transformMatchedKeypointsToEigen(const std::vector<cv::KeyPoint> &keypoints
 std::vector<int> uniqueColumnsInMatrix(const Matrix3Xf &pointMat, float tol=0.1f);
 
 /**
+ * Note: adopt from Middlebury SDK
+ * @param disp: compute disparity map
+ * @param gtdisp: ground truth disparity map
+ * @param mask
+ * @param badthresh
+ * @param maxdisp
+ * @param rounddisp
+ */
+void evaldisp(cv::Mat disp, cv::Mat gtdisp, cv::Mat mask, float badthresh, float maxdisp, int rounddisp);
+
+/**
  * Computes the reprojection error.
  * @param matchesLeft
  * @param matchesRight
@@ -62,5 +73,12 @@ float averageReconstructionError(const Matrix3Xf& matchesLeft, const Matrix3Xf& 
                                  const Matrix3f& intrinsicsLeft, const Matrix3f& intrinsicsRight,
                                  const Matrix3f& rotation, const Vector3f& translation,
                                  const Matrix3Xf& reconstructedPointsLeft);
+
+/**
+ * Computes average disparity in disparity map
+ * @param disparityMap
+ * @return average disparity
+ */
+float computeAverageDisparity(cv::Mat& disparityMap);
 
 #endif //STEREO_RECONSTRUCTION_UTILS_H

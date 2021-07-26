@@ -4,6 +4,22 @@
 
 #include "utils.h"
 
+
+float computeAverageDisparity(cv::Mat& disparityMap) {
+    float sum = 0;
+    int validCounter = 0;
+    for (int i=0; i < disparityMap.rows; i++) {
+        for (int j=0; j < disparityMap.cols; j++) {
+            if (!isinf(disparityMap.at<float>(i, j))) {
+                sum += disparityMap.at<float>(i, j);
+                validCounter++;
+            }
+        }
+    }
+    return sum / validCounter;
+}
+
+
 Matrix3f vectorAsSkew(const Vector3f &vec) {
     Matrix3f skewMatrix = Matrix3f::Zero();
     // upper triangular matrix
@@ -17,6 +33,7 @@ Matrix3f vectorAsSkew(const Vector3f &vec) {
     return skewMatrix;
 }
 
+
 VectorXf kron(const VectorXf &vec1, const VectorXf &vec2) {
     int n = (int) vec1.size();
     int m = (int) vec2.size();
@@ -28,6 +45,7 @@ VectorXf kron(const VectorXf &vec1, const VectorXf &vec2) {
 
     return out;
 }
+
 
 void transformMatchedKeypointsToEigen(const std::vector<cv::KeyPoint> &keypointsLeft,
                                       const std::vector<cv::KeyPoint> &keypointsRight,
@@ -55,6 +73,7 @@ void transformMatchedKeypointsToEigen(const std::vector<cv::KeyPoint> &keypoints
     }
 }
 
+
 std::vector<int> uniqueColumnsInMatrix(const Matrix3Xf &pointMat, float tol) {
     if (pointMat.cols() == 0 )
         return std::vector<int> {};
@@ -74,6 +93,7 @@ std::vector<int> uniqueColumnsInMatrix(const Matrix3Xf &pointMat, float tol) {
     }
     return uniqueIdx;
 }
+
 
 float averageReconstructionError(const Matrix3Xf& matchesLeft, const Matrix3Xf& matchesRight,
                                  const Matrix3f& intrinsicsLeft, const Matrix3f& intrinsicsRight,
@@ -100,3 +120,49 @@ float averageReconstructionError(const Matrix3Xf& matchesLeft, const Matrix3Xf& 
 }
 
 
+void evaldisp(cv::Mat disp, cv::Mat gtdisp, cv::Mat mask, float badthresh, float maxdisp, int rounddisp)
+{
+    cv::Size gtShape = gtdisp.size();
+    cv::Size sh = disp.size();
+    cv::Size maskShape = mask.size();
+    assert (gtShape == sh);
+    assert (gtShape == maskShape);
+    int n = 0;
+    int bad = 0;
+    int invalid = 0;
+    float serr = 0;
+    for (int y = 0; y < gtShape.height; y++) {
+        for (int x = 0; x < gtShape.width; x++) {
+            float gt = gtdisp.at<float>(y, x);
+            if (gt == INFINITY)                      // unknown
+                continue;
+            float d = disp.at<float>(y, x);
+            bool valid = (d != 0);
+            if (valid)
+                d = std::max(0.0f, std::min(maxdisp, d));
+            if (valid && rounddisp)
+                d = round(d);
+            float err = std::abs(d - gt);
+            if (mask.at<uint8_t>(y, x) != 255) {
+                // do not evaluate
+            } else {
+                n++;
+                if (valid) {
+                    serr += err;
+                    if (err > badthresh)
+                        bad++;
+                } else {
+                    invalid++;
+                }
+            }
+        }
+    }
+
+    float badpercent =  100.0 * bad / n;
+    float invalidpercent =  100.0 * invalid / n;
+    float totalbadpercent =  100.0 * ( bad + invalid ) / n;
+    float avgErr = serr / (n - invalid);
+    std::cout << "number of evaluated: " << n << "\n";
+    printf("valid: %4.1f \nbad percent: %6.2f  \ninvalid percent: %6.2f  \ntotal bad percent: %6.2f \narbErr: %6.2f\n",   100.0*n/(gtShape.width * gtShape.height),
+           badpercent, invalidpercent, totalbadpercent, avgErr);
+}

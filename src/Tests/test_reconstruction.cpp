@@ -1,6 +1,7 @@
 
 #include "../Reconstruction/reconstruction.h"
 #include "../DataLoader/data_loader.h"
+#include "../utils.h"
 
 
 bool test_reconstruction_01() {
@@ -54,7 +55,7 @@ bool test_reconstruction_02(){
     float focalLength = trainingData.getCameraMatrixRight()(0,0);
     float baseline = 1.f;  // due to normalization (extrinsics translation vector has length 1)
 
-    cv::Mat depthValues = convertDispartiyToDepth(disparityImage, focalLength, baseline);
+    cv::Mat depthValues = convertDisparityToDepth(disparityImage, focalLength, baseline);
     // filter out large outliers naive way
     for (int i=0; i < depthValues.rows; i++) {
         for (int j=0; j < depthValues.cols; j++) {
@@ -68,37 +69,6 @@ bool test_reconstruction_02(){
     Matrix3f intrinsics = trainingData.getCameraMatrixRight();
 
     reconstruction(image, depthValues, intrinsics, 1);
-    return true;
-}
-
-
-bool test_reconstruction_03(){
-    /*
-     * Testing with HitNet results
-     * */
-
-    int scenarioIdx = 13;
-
-    DataLoader dataLoader = DataLoader();
-    Data trainingData = dataLoader.loadTrainingScenario(scenarioIdx);
-    cv::Mat image = trainingData.getImageLeft();
-
-    cv::Mat disparityImage = dataLoader.loadTrainingDisparityHitNet(scenarioIdx);
-//    cv::Mat disparityImage = trainingData.getDisparityLeft();
-    scaleDisparityMap(disparityImage, 1);
-
-    // std::cout << disparityImage << std::endl;
-
-    float focalLength = trainingData.getCameraMatrixLeft()(0,0);
-    float baseline = 1.f;  // due to normalization (extrinsics translation vector has length 1)
-
-    cv::Mat depthValues = convertDispartiyToDepth(disparityImage, focalLength, baseline);
-
-    // intrinsics
-    Matrix3f intrinsics = trainingData.getCameraMatrixLeft();
-
-    float thrMarchingSquares = 1;
-    reconstruction(image, depthValues, intrinsics, thrMarchingSquares);
     return true;
 }
 
@@ -120,7 +90,7 @@ bool test_reconstruction_04(){
     float focalLength = trainingData.getCameraMatrixRight()(0,0);
     float baseline = 1.f;  // due to normalization (extrinsics translation vector has length 1)
 
-    cv::Mat depthValues = convertDispartiyToDepth(disparityImage, focalLength, baseline);
+    cv::Mat depthValues = convertDisparityToDepth(disparityImage, focalLength, baseline);
 
     // intrinsics
     Matrix3f intrinsics = trainingData.getCameraMatrixRight();
@@ -130,7 +100,45 @@ bool test_reconstruction_04(){
 }
 
 
+bool test_reconstruction_HitNet(){
+    /*
+     * Testing with HitNet results
+     * */
+
+    int scenarioIdx = 13;
+
+    DataLoader dataLoader = DataLoader();
+    Data trainingData = dataLoader.loadTrainingScenario(scenarioIdx);
+    cv::Mat image = trainingData.getImageLeft();
+
+    cv::Mat disparityImage = dataLoader.loadTrainingDisparityHitNet(scenarioIdx);
+
+    cv::Mat disparityImageGT = trainingData.getDisparityLeft();
+    // calculate image mean
+    float mean = computeAverageDisparity(disparityImage);
+    float meanGT = computeAverageDisparity(disparityImageGT);
+    // scale HitNet according to ground truth
+    scaleDisparityMap(disparityImage, meanGT/mean);
+
+    // write disparity
+    std::string disparityPath = "../../results/disparity_map.png";
+    cv::imwrite(disparityPath, disparityImage);
+
+    float focalLength = trainingData.getCameraMatrixLeft()(0,0);
+    float baseline = 1.f;  // due to normalization (extrinsics translation vector has length 1)
+
+    cv::Mat depthValues = convertDisparityToDepth(disparityImage, focalLength, baseline);
+
+    // intrinsics
+    Matrix3f intrinsics = trainingData.getCameraMatrixLeft();
+
+    float thrMesh = 1;
+    reconstruction(image, depthValues, intrinsics, thrMesh);
+    return true;
+}
+
+
 int main(){
-    test_reconstruction_04();
+    test_reconstruction_HitNet();
     return 0;
 }
