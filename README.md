@@ -66,5 +66,3 @@ You can download it here: https://github.com/roboception/cvkit and make sure to 
 
 2. Displaying disparity image as 3D model: 
 <pre><code> plyv image_disp.pfm </code></pre>
-
-TODO 
